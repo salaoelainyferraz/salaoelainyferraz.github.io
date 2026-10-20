@@ -204,18 +204,29 @@ p { margin: 0; }
   position: relative; border-radius: var(--radius-sm); overflow: hidden; aspect-ratio: 1;
   display: grid; place-items: center; text-decoration: none; background: #fff; border: 1px solid var(--line);
 }
-.gallery__item--destaque { grid-column: 1 / -1; aspect-ratio: 16 / 10; border-radius: var(--radius); }
-@media (min-width: 760px) {
-  .gallery { grid-template-columns: 2fr 1fr 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .gallery__item { aspect-ratio: auto; border-radius: var(--radius); }
-  .gallery__item--destaque { grid-column: 1; grid-row: 1 / span 2; aspect-ratio: 4 / 3.4; }
-}
+.gallery__item--destaque { grid-column: 1 / -1; aspect-ratio: 1; border-radius: var(--radius); }
+.gallery__item picture { position: absolute; inset: 0; }
 .gallery__item img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
+.gallery__item--destaque img { object-position: 50% 30%; }
 .gallery__item:hover img { transform: scale(1.05); }
-.gallery__ph { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font-size: 0.78rem; text-align: center; padding: 6px; line-height: 1.25; }
-.gallery__ph svg { width: 18px; height: 18px; color: var(--gold-light); }
-.gallery__item--destaque .gallery__ph { font-size: 1rem; gap: 10px; }
-.gallery__item--destaque .gallery__ph svg { width: 28px; height: 28px; }
+.gallery__legenda {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 7px; font-size: 0.72rem; line-height: 1.2; color: #fff; text-align: center;
+  background: linear-gradient(transparent, rgb(31 26 18 / 0.62)); letter-spacing: 0.02em;
+}
+.gallery__item--destaque .gallery__legenda { font-size: 0.95rem; padding: 40px 14px 14px; letter-spacing: 0.06em; }
+.gallery__ph { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--brand); font-size: 0.72rem; text-align: center; padding: 6px; line-height: 1.25; }
+.gallery__ph svg { width: 20px; height: 20px; color: var(--brand); }
+.gallery__item--ig { background: var(--brand-50); border-color: #e6d5b0; }
+.gallery__item--ig:hover { background: #f3e7cc; }
+@media (min-width: 760px) {
+  .gallery { grid-template-columns: 1.15fr 1fr 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .gallery__item { border-radius: var(--radius); }
+  .gallery__item--destaque { grid-column: 1; grid-row: 1 / span 2; aspect-ratio: auto; }
+  .gallery__legenda { font-size: 0.85rem; padding: 30px 12px 12px; }
+  .gallery__item--destaque .gallery__legenda { font-size: 1.05rem; }
+  .gallery__ph { font-size: 0.92rem; }
+  .gallery__ph svg { width: 26px; height: 26px; }
+}
 .gallery-foot { margin-top: 16px; display: flex; justify-content: center; }
 
 /* ---------- Avaliação (faixa compacta) ---------- */

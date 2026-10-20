@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Agendar horário | Salão de Beleza Elainy Ferraz</title>
+  <meta name="description" content="Agende seu horário no Salão de Beleza Elainy Ferraz, em Vitória da Conquista. Escolha o serviço, o dia e o horário livre.">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="img/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta property="og:title" content="Agende seu horário · Elainy Ferraz">
+  <meta property="og:description" content="Escolha o serviço, o dia e o horário. Confirmação na hora.">
+  <meta property="og:image" content="img/og-image.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="booking-page">
+  <div id="demo-banner"></div>
+
+  <header class="bk-header">
+    <div class="container bk-header__inner">
+      <button class="icon-btn" id="btn-voltar" type="button" aria-label="Voltar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="bk-header__title">
+        <strong>Agendar horário</strong>
+        <span id="passo-label" aria-live="polite">Carregando…</span>
+      </div>
+      <a class="bk-header__logo" href="index.html" aria-label="Ir para a página inicial">
+        <picture><source srcset="img/logo-sm.webp" type="image/webp"><img src="img/logo-sm.png" alt="Elainy Ferraz" width="105" height="20"></picture>
+      </a>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress__bar" id="progress"></div></div>
+  </header>
+
+  <main class="bk-main">
+    <div class="container bk-wrap" id="app">
+      <div class="skeleton" style="height:44px;width:60%"></div>
+      <div class="skeleton" style="height:76px;margin-top:28px"></div>
+      <div class="skeleton" style="height:76px;margin-top:10px"></div>
+      <div class="skeleton" style="height:76px;margin-top:10px"></div>
+    </div>
+  </main>
+
+  <div class="bk-bar" id="bar" hidden>
+    <div class="container bk-wrap bk-bar__inner">
+      <div class="bk-bar__info" id="bar-info" aria-live="polite"></div>
+      <button class="btn" id="bar-btn" type="button">Continuar</button>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/motor-agenda.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/agendar.js"></script>
+</body>
+</html>

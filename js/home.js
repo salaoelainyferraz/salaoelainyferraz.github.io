@@ -34,6 +34,28 @@
   }
   $('#ano').textContent = new Date().getFullYear();
 
+  /* ---------- Trabalhos: pontinhos do carrossel (só aparecem no celular) ---------- */
+  const galeria = $('#gallery');
+  const pontos = $('#gallery-dots');
+  if (galeria && pontos) {
+    const itens = [...galeria.children];
+    pontos.innerHTML = itens.map(() => '<span></span>').join('');
+    const marcar = () => {
+      // A foto ativa é a mais perto do centro da tela
+      const g = galeria.getBoundingClientRect();
+      const meio = g.left + g.width / 2;
+      let atual = 0, menor = Infinity;
+      itens.forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        const d = Math.abs(r.left + r.width / 2 - meio);
+        if (d < menor) { menor = d; atual = i; }
+      });
+      [...pontos.children].forEach((p, i) => p.classList.toggle('is-on', i === atual));
+    };
+    galeria.addEventListener('scroll', marcar, { passive: true });
+    marcar();
+  }
+
   /* ---------- Serviços: abas por categoria + lista de preços ---------- */
   let servicos = [];
   let categoriaAtiva = null;

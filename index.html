@@ -109,28 +109,45 @@
           <span class="eyebrow eyebrow--center">Trabalhos</span>
           <h2>Feito aqui, com amor</h2>
         </div>
-        <!-- Fotos em img/trabalhos/ (originais em assets-originais/fotos/). Para trocar: mesmo nome de arquivo, ou ajuste aqui. -->
-        <div class="gallery reveal">
+        <!-- Fotos em img/trabalhos/ (originais em assets-originais/fotos/, gerar com npm run fotos). No celular a galeria vira carrossel. -->
+        <div class="gallery reveal" id="gallery">
           <a class="gallery__item gallery__item--destaque" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
             <picture><source srcset="img/trabalhos/mechas-caramelo.webp" type="image/webp"><img src="img/trabalhos/mechas-caramelo.jpg" alt="Cabelo longo ondulado com mechas caramelo, visto de costas" width="1000" height="1250"></picture>
             <span class="gallery__legenda">Mechas &amp; iluminado</span>
           </a>
           <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
-            <picture><source srcset="img/trabalhos/cachos-definidos.webp" type="image/webp"><img src="img/trabalhos/cachos-definidos.jpg" alt="Cliente com cachos definidos e maquiagem feita no salão" loading="lazy" width="700" height="700"></picture>
+            <picture><source srcset="img/trabalhos/cachos-definidos.webp" type="image/webp"><img src="img/trabalhos/cachos-definidos.jpg" alt="Cliente com cachos definidos e maquiagem feita no salão" loading="lazy" width="800" height="1000"></picture>
             <span class="gallery__legenda">Cachos definidos</span>
           </a>
           <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
-            <picture><source srcset="img/trabalhos/penteado-cachos.webp" type="image/webp"><img src="img/trabalhos/penteado-cachos.jpg" alt="Penteado preso com cachos, visto de perfil" loading="lazy" width="700" height="700"></picture>
+            <picture><source srcset="img/trabalhos/cachos-iluminados.webp" type="image/webp"><img src="img/trabalhos/cachos-iluminados.jpg" alt="Cachos longos com iluminado caramelo, vistos de lado" loading="lazy" width="800" height="1000"></picture>
+            <span class="gallery__legenda">Cachos com iluminado</span>
+          </a>
+          <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
+            <picture><source srcset="img/trabalhos/penteado-cachos.webp" type="image/webp"><img src="img/trabalhos/penteado-cachos.jpg" alt="Penteado preso com cachos, visto de perfil" loading="lazy" width="800" height="1000"></picture>
             <span class="gallery__legenda">Penteado com cachos</span>
           </a>
           <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
-            <picture><source srcset="img/trabalhos/penteado-noiva.webp" type="image/webp"><img src="img/trabalhos/penteado-noiva.jpg" alt="Penteado de noiva com ondas e coroa de flores" loading="lazy" width="700" height="700"></picture>
+            <picture><source srcset="img/trabalhos/ondas-mel.webp" type="image/webp"><img src="img/trabalhos/ondas-mel.jpg" alt="Cabelo longo com ondas e pontas em tom mel, visto de costas" loading="lazy" width="800" height="1000"></picture>
+            <span class="gallery__legenda">Ondas com mel</span>
+          </a>
+          <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
+            <picture><source srcset="img/trabalhos/escova-ondas.webp" type="image/webp"><img src="img/trabalhos/escova-ondas.jpg" alt="Cabelo preto longo com escova modelada em ondas, visto de costas" loading="lazy" width="800" height="1000"></picture>
+            <span class="gallery__legenda">Escova modelada</span>
+          </a>
+          <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
+            <picture><source srcset="img/trabalhos/curto-acobreado.webp" type="image/webp"><img src="img/trabalhos/curto-acobreado.jpg" alt="Cabelo na altura dos ombros, acobreado e com ondas" loading="lazy" width="800" height="1000"></picture>
+            <span class="gallery__legenda">Acobreado com ondas</span>
+          </a>
+          <a class="gallery__item" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
+            <picture><source srcset="img/trabalhos/penteado-noiva.webp" type="image/webp"><img src="img/trabalhos/penteado-noiva.jpg" alt="Penteado de noiva com ondas e coroa de flores" loading="lazy" width="800" height="1000"></picture>
             <span class="gallery__legenda">Penteado de noiva</span>
           </a>
           <a class="gallery__item gallery__item--ig" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
             <span class="gallery__ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>Mais trabalhos<br>no Instagram</span>
           </a>
         </div>
+        <div class="gallery-dots" id="gallery-dots" aria-hidden="true"></div>
         <div class="gallery-foot">
           <a class="btn btn--ghost btn--sm" href="https://www.instagram.com/salao_elainy/" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>

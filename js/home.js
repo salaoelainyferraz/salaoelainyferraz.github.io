@@ -56,6 +56,80 @@
     marcar();
   }
 
+  /* ---------- Trabalhos: clicar na foto amplia (o card do Instagram continua sendo link) ---------- */
+  const fotos = galeria ? [...galeria.querySelectorAll('.gallery__item:not(.gallery__item--ig)')] : [];
+  if (fotos.length) {
+    const icone = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+    const lb = document.createElement('div');
+    lb.className = 'lightbox';
+    lb.setAttribute('role', 'dialog');
+    lb.setAttribute('aria-modal', 'true');
+    lb.setAttribute('aria-label', 'Foto ampliada');
+    lb.innerHTML = `
+      <figure class="lightbox__fig"><img class="lightbox__img" alt=""><figcaption class="lightbox__legenda"></figcaption></figure>
+      <button class="lightbox__btn lightbox__fechar" type="button" aria-label="Fechar">${icone('M6 6l12 12M18 6L6 18')}</button>
+      <button class="lightbox__btn lightbox__ant" type="button" aria-label="Foto anterior">${icone('M15 5l-7 7 7 7')}</button>
+      <button class="lightbox__btn lightbox__prox" type="button" aria-label="Próxima foto">${icone('M9 5l7 7-7 7')}</button>`;
+    document.body.appendChild(lb);
+    const img = lb.querySelector('.lightbox__img');
+    const legenda = lb.querySelector('.lightbox__legenda');
+    let atual = 0, voltarFoco = null;
+
+    const mostrar = (i) => {
+      atual = (i + fotos.length) % fotos.length;
+      const orig = fotos[atual].querySelector('img');
+      img.classList.add('is-trocando');
+      const nova = new Image();
+      nova.onload = nova.onerror = () => {
+        img.src = nova.src;
+        img.alt = orig.alt;
+        img.classList.remove('is-trocando');
+      };
+      nova.src = orig.currentSrc || orig.src;
+      legenda.innerHTML = `${esc(fotos[atual].querySelector('.gallery__legenda').textContent)}<small>${atual + 1} de ${fotos.length}</small>`;
+    };
+    const abrir = (i) => {
+      voltarFoco = document.activeElement;
+      mostrar(i);
+      lb.classList.add('is-open');
+      document.body.classList.add('sem-rolagem');
+      lb.querySelector('.lightbox__fechar').focus();
+    };
+    const fechar = () => {
+      lb.classList.remove('is-open');
+      document.body.classList.remove('sem-rolagem');
+      if (voltarFoco) voltarFoco.focus({ preventScroll: true });
+    };
+
+    fotos.forEach((a, i) => a.addEventListener('click', (e) => { e.preventDefault(); abrir(i); }));
+    lb.querySelector('.lightbox__fechar').addEventListener('click', fechar);
+    lb.querySelector('.lightbox__ant').addEventListener('click', () => mostrar(atual - 1));
+    lb.querySelector('.lightbox__prox').addEventListener('click', () => mostrar(atual + 1));
+    lb.addEventListener('click', (e) => { if (e.target === lb || e.target === lb.querySelector('.lightbox__fig')) fechar(); });
+    document.addEventListener('keydown', (e) => {
+      if (!lb.classList.contains('is-open')) return;
+      if (e.key === 'Escape') fechar();
+      else if (e.key === 'ArrowLeft') mostrar(atual - 1);
+      else if (e.key === 'ArrowRight') mostrar(atual + 1);
+      else if (e.key === 'Tab') {
+        // mantém o foco dentro da foto ampliada
+        const bts = [...lb.querySelectorAll('button')];
+        const pos = bts.indexOf(document.activeElement);
+        e.preventDefault();
+        bts[(pos + (e.shiftKey ? -1 : 1) + bts.length) % bts.length].focus();
+      }
+    });
+    // Arrastar com o dedo para o lado troca de foto
+    let x0 = null, y0 = null;
+    lb.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    lb.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) mostrar(atual + (dx < 0 ? 1 : -1));
+      x0 = null;
+    }, { passive: true });
+  }
+
   /* ---------- Serviços: abas por categoria + lista de preços ---------- */
   let servicos = [];
   let categoriaAtiva = null;

@@ -3,24 +3,223 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Painel do salão · Elainy Ferraz</title>
+  <title>Painel · Salão Elainy Ferraz</title>
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#faf6ee">
   <link rel="icon" href="../img/favicon.png" type="image/png">
   <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
-  <!-- Atalho curto para o painel da equipe (o painel em si roda no Google Apps Script) -->
-  <meta http-equiv="refresh" content="0; url=https://script.google.com/macros/s/AKfycbxEh4DRgVu-UeZ2ZjUbA-6KX9n2Tcve6MDeCP7rksrZcqVdCZBBFLkuEE5qy3MGnd8J/exec">
-  <script>location.replace('https://script.google.com/macros/s/AKfycbxEh4DRgVu-UeZ2ZjUbA-6KX9n2Tcve6MDeCP7rksrZcqVdCZBBFLkuEE5qy3MGnd8J/exec');</script>
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #faf6ee; color: #4d4436; font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 16px; }
-    img { width: 200px; display: block; margin: 0 auto 16px; }
-    a { color: #8a6420; }
-  </style>
+  <!-- Os dados vêm do Google Apps Script: abrir a conexão cedo deixa a primeira resposta mais rápida -->
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://script.googleusercontent.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="painel.css?v=2">
+  <script src="painel.js?v=2" defer></script>
 </head>
-<body>
-  <div>
-    <img src="../img/logo-sm.png" alt="Elainy Ferraz">
-    <p>Abrindo o painel do salão…</p>
-    <p><a href="https://script.google.com/macros/s/AKfycbxEh4DRgVu-UeZ2ZjUbA-6KX9n2Tcve6MDeCP7rksrZcqVdCZBBFLkuEE5qy3MGnd8J/exec">Clique aqui se não abrir sozinho</a></p>
-  </div>
+<body class="deslogado">
+  <!-- ===== Login ===== -->
+  <section class="login" id="login" aria-labelledby="login-h">
+    <div class="login__card">
+      <picture><source srcset="../img/logo-sm.webp" type="image/webp"><img class="login__logo" src="../img/logo-sm.png" alt="Elainy Ferraz" width="220" height="42"></picture>
+      <div class="login__titulo">Painel do salão</div>
+      <h1 id="login-h">Bem-vinda!</h1>
+      <p class="login__sub">Entre com seu usuário e senha.</p>
+      <form id="form-login" novalidate>
+        <label class="f">Usuário<input class="input" id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+        <label class="f">Senha
+          <span class="senha"><input class="input" id="login-senha" type="password" autocomplete="current-password"><button type="button" id="ver-senha" aria-label="Mostrar senha">Mostrar</button></span>
+        </label>
+        <label class="check"><input type="checkbox" id="login-lembrar" checked> Manter conectado neste aparelho</label>
+        <div id="login-erro" aria-live="assertive"></div>
+        <button class="btn" type="submit" id="login-ok">Entrar</button>
+      </form>
+      <p class="login__ajuda">Esqueceu a senha? Peça para a Elainy trocar<br>(no painel, em Equipe).</p>
+    </div>
+  </section>
+
+  <header class="top">
+    <div class="top__in">
+      <div class="marca">
+        <picture><source srcset="../img/logo-sm.webp" type="image/webp"><img src="../img/logo-sm.png" alt="Elainy Ferraz" width="126" height="24"></picture>
+        <span>Painel do salão</span>
+      </div>
+      <div class="dia">
+        <button class="icon" id="ant" type="button" aria-label="Dia anterior" title="Dia anterior (seta ←)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="dia__label" id="dia-label" type="button" title="Ver o calendário do mês" aria-live="polite">Carregando…</button>
+        <button class="icon" id="prox" type="button" aria-label="Próximo dia" title="Próximo dia (seta →)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+        <button class="btn btn--ghost btn--sm" id="hoje" type="button">Hoje</button>
+      </div>
+      <div class="acoes">
+        <div class="quem">
+          <button class="quem__btn" type="button" id="quem-btn" aria-haspopup="true" aria-expanded="false"><span>Olá, </span><b id="quem-nome"></b> <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="quem__menu" id="quem-menu" hidden>
+            <button type="button" id="minha-senha">Trocar minha senha</button>
+            <button type="button" id="sair">Sair</button>
+          </div>
+        </div>
+        <button class="btn btn--ghost" id="btn-mes" type="button" title="Calendário do mês: quantas clientes em cada dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Mês</span></button>
+        <button class="btn btn--ghost" id="btn-bloq" type="button" title="Bloquear horário, dia ou férias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Bloquear</span></button>
+        <button class="btn btn--ghost" id="btn-precos" type="button" title="Serviços e preços" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Preços</span></button>
+        <button class="btn btn--ghost" id="btn-equipe" type="button" title="Equipe e acessos ao painel" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.5 3 5.2"/></svg><span>Equipe</span></button>
+        <button class="btn" id="btn-encaixe" type="button" title="Agendar ou encaixar uma cliente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>Novo atendimento</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="resumo" id="resumo" aria-label="Resumo do dia"></section>
+    <div class="barra">
+      <div class="visao" role="group" aria-label="O que mostrar" id="visao"></div>
+      <div class="chips" id="chips" role="group" aria-label="Filtrar por profissional"></div>
+      <span class="barra__info">Clique num atendimento para ver a ficha completa · atualiza sozinho</span>
+    </div>
+    <section class="grade" id="grade" aria-live="polite"></section>
+  </main>
+
+  <!-- ===== Calendário do mês ===== -->
+  <dialog id="dlg-mes" aria-labelledby="mes-h">
+    <div class="dlg">
+      <div class="dlg__head">
+        <button class="icon" type="button" id="mes-ant" aria-label="Mês anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h2 id="mes-h" class="mes__titulo"></h2>
+        <button class="icon" type="button" id="mes-prox" aria-label="Próximo mês"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="dlg__body">
+        <div class="mes" id="mes-grade" role="grid" aria-labelledby="mes-h"></div>
+        <p class="dica mes__legenda" id="mes-legenda"></p>
+      </div>
+      <div class="dlg__foot">
+        <button class="btn btn--ghost btn--sm esq" type="button" id="mes-hoje">Ir para hoje</button>
+        <button class="btn btn--ghost" type="button" data-fechar>Fechar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ===== Ficha do atendimento ===== -->
+  <dialog id="dlg-ficha" aria-labelledby="ficha-nome"><div class="dlg" id="ficha"></div></dialog>
+
+  <!-- ===== Recibo ===== -->
+  <dialog id="dlg-recibo">
+    <div class="dlg">
+      <div class="dlg__head"><h2>Recibo</h2><button class="icon icon--plain" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="dlg__body"><div id="recibo-area" class="recibo"></div></div>
+      <div class="dlg__foot"><button class="btn btn--ghost" type="button" data-fechar>Fechar</button><button class="btn" type="button" id="imprimir">Imprimir</button></div>
+    </div>
+  </dialog>
+
+  <!-- ===== Novo atendimento ===== -->
+  <dialog id="dlg-enc">
+    <form id="form-enc" novalidate>
+      <div class="dlg__head"><h2>Novo atendimento</h2><button class="icon icon--plain" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="abas" role="tablist" aria-label="Tipo de atendimento" id="enc-abas">
+        <button type="button" role="tab" data-tipo="agendar" aria-selected="true">Agendar<small>Marcar num horário livre da agenda</small></button>
+        <button type="button" role="tab" data-tipo="encaixe" aria-selected="false">Encaixe<small>Chegou sem marcar ou fora da agenda</small></button>
+      </div>
+      <div class="dlg__body">
+        <div class="linha2">
+          <div class="f">
+            <label for="enc-nome">Nome da cliente <small>(digite para achar quem já veio)</small></label>
+            <div class="busca">
+              <input class="input" id="enc-nome" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="enc-sug" placeholder="Ex.: Cláudia">
+              <ul class="sug" id="enc-sug" role="listbox" aria-label="Clientes já cadastradas" hidden></ul>
+            </div>
+          </div>
+          <label class="f">WhatsApp<input class="input" id="enc-fone" type="tel" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="(77) 99999-0000"></label>
+        </div>
+        <div id="enc-cliente" class="cliente-info" hidden></div>
+        <div><div class="rot">Serviços</div><div class="servs" id="enc-servs"></div></div>
+        <label class="f">Profissional<select class="input" id="enc-prof"></select></label>
+        <div class="linha2">
+          <label class="f">Dia<input class="input" id="enc-data" type="date"></label>
+          <label class="f" id="enc-hora-box">Horário<input class="input" id="enc-hora" type="time" step="300"></label>
+        </div>
+        <div id="enc-livres-box"><div class="rot">Horários livres</div><div class="livres" id="enc-livres"></div></div>
+        <div class="linha2">
+          <label class="f"><span>E-mail <small>(opcional)</small></span><input class="input" id="enc-email" type="email" inputmode="email" autocomplete="off" placeholder="cliente@email.com"></label>
+          <label class="f"><span>Observação <small>(opcional)</small></span><input class="input" id="enc-obs"></label>
+        </div>
+        <div id="enc-aviso" aria-live="assertive"></div>
+      </div>
+      <div class="dlg__foot">
+        <span class="dica esq">Obrigatórios: nome e WhatsApp.</span>
+        <button class="btn btn--ghost" type="button" data-fechar>Voltar</button>
+        <button class="btn" type="submit" id="enc-ok">Agendar horário</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== Bloqueio ===== -->
+  <dialog id="dlg-bloq">
+    <form id="form-bloq" novalidate>
+      <div class="dlg__head"><h2>Bloquear agenda</h2><button class="icon icon--plain" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="dlg__body">
+        <p style="margin:0;color:var(--muted);font-size:.92rem">O período bloqueado some do site para as clientes. Não dá para bloquear por cima de um atendimento.</p>
+        <label class="f">Profissional<select class="input" id="bloq-prof"></select></label>
+        <div><div class="rot">O que bloquear</div>
+          <div class="opcoes" id="bloq-tipo">
+            <button type="button" data-tipo="horas" aria-pressed="true">Algumas horas</button>
+            <button type="button" data-tipo="dia" aria-pressed="false">Dia inteiro</button>
+            <button type="button" data-tipo="periodo" aria-pressed="false">Vários dias (férias)</button>
+          </div>
+        </div>
+        <div class="linha2">
+          <label class="f"><span id="bloq-data-rot">Dia</span><input class="input" id="bloq-data" type="date"></label>
+          <label class="f" id="bloq-ate-box" hidden><span>Até <small>(último dia fora)</small></span><input class="input" id="bloq-ate" type="date"></label>
+        </div>
+        <div class="linha2" id="bloq-horas">
+          <label class="f">Das<input class="input" id="bloq-ini" type="time" step="300"></label>
+          <label class="f">Até<input class="input" id="bloq-fim" type="time" step="300"></label>
+        </div>
+        <p class="dica" id="bloq-resumo" hidden></p>
+        <label class="f"><span>Motivo <small>(opcional)</small></span><input class="input" id="bloq-motivo" maxlength="60" placeholder="Ex.: almoço, médico, curso"></label>
+        <div id="bloq-aviso" aria-live="assertive"></div>
+      </div>
+      <div class="dlg__foot">
+        <button class="btn btn--ghost" type="button" data-fechar>Voltar</button>
+        <button class="btn" type="submit" id="bloq-ok">Bloquear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== Preços / Equipe (só Elainy e administrador) ===== -->
+  <dialog id="dlg-salao" aria-labelledby="salao-h">
+    <div class="dlg">
+      <div class="dlg__head"><h2 id="salao-h">Preços</h2><button class="icon icon--plain" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="dlg__body" id="salao-corpo"></div>
+      <div class="dlg__foot"><span class="dica esq" id="salao-dica">O que você salvar aqui aparece no site na hora.</span><button class="btn btn--ghost" type="button" data-fechar>Fechar</button></div>
+    </div>
+  </dialog>
+
+  <!-- ===== Trocar minha senha ===== -->
+  <dialog id="dlg-senha" aria-labelledby="senha-h">
+    <form id="form-senha" novalidate>
+      <div class="dlg__head"><h2 id="senha-h">Trocar minha senha</h2><button class="icon icon--plain" type="button" data-fechar aria-label="Fechar">✕</button></div>
+      <div class="dlg__body">
+        <label class="f">Senha atual<input class="input" id="ms-atual" type="password" autocomplete="current-password"></label>
+        <label class="f"><span>Senha nova <small>(mínimo 6 letras ou números)</small></span><input class="input" id="ms-nova" type="password" autocomplete="new-password"></label>
+        <label class="f">Repita a senha nova<input class="input" id="ms-nova2" type="password" autocomplete="new-password"></label>
+        <div id="ms-aviso" aria-live="assertive"></div>
+      </div>
+      <div class="dlg__foot">
+        <button class="btn btn--ghost" type="button" data-fechar>Voltar</button>
+        <button class="btn" type="submit" id="ms-salvar">Salvar senha nova</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ===== Confirmação ===== -->
+  <dialog id="dlg-conf">
+    <div class="dlg">
+      <div class="dlg__head"><h2 id="conf-titulo"></h2></div>
+      <div class="dlg__body"><p id="conf-texto" style="margin:0"></p></div>
+      <div class="dlg__foot">
+        <button class="btn btn--ghost" type="button" id="conf-nao"></button>
+        <button class="btn btn--danger" type="button" id="conf-sim"></button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
 </body>
 </html>

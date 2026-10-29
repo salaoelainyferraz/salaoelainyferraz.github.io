@@ -119,16 +119,22 @@
 
     async config() {
       if (DEMO) return structuredClone(S.fallback);
+      // Serviços e preços ficam guardados no aparelho por 5 minutos: a página abre na hora
+      // e confere com a planilha em segundo plano (o Google às vezes demora 1 a 2 segundos).
       const cacheKey = 'salao_cfg';
+      const guardar = (data) => { try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), data })); } catch (e) {} };
+      let guardado = null;
+      try { guardado = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) {}
+      if (guardado && guardado.data && Date.now() - guardado.t < 5 * 60e3) {
+        get({ action: 'config' }).then(guardar).catch(() => {});
+        return guardado.data;
+      }
       try {
         const data = await get({ action: 'config' });
-        try { sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) {}
+        guardar(data);
         return data;
       } catch (e) {
-        try {
-          const c = sessionStorage.getItem(cacheKey);
-          if (c) return JSON.parse(c);
-        } catch (e2) {}
+        if (guardado && guardado.data) return guardado.data; // sem internet: usa o último que viu
         const fb = structuredClone(S.fallback);
         fb.offline = true;
         return fb;

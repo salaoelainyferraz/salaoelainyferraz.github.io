@@ -318,7 +318,7 @@
             (a.criadoEm ? '<p class="dica">Marcado ' + (a.origem === 'Site' || !a.origem ? 'pelo site' : 'no painel') + ' em ' + esc(a.criadoEm) + '</p>' : '') +
           '</div>' +
           '<div class="bloco"><div class="bloco__t">Cliente</div>' +
-            '<div class="dado"><span>WhatsApp</span>' + (a.fone ? esc(fone(a.fone)) : '—') + '</div>' +
+            '<div class="dado"><span>Telefone</span>' + (a.fone ? esc(fone(a.fone)) : '—') + '</div>' +
             (a.email ? '<div class="dado" style="margin-top:6px"><span>E-mail</span>' + esc(a.email) + '</div>' : '') +
             (a.obs ? '<div class="dado" style="margin-top:6px"><span>Observação da cliente</span>📝 ' + esc(a.obs) + '</div>' : '') +
             '<div class="hist">' + histTags + '</div>' +
@@ -585,7 +585,7 @@
     $('#enc-ok').textContent = tipoNovo === 'agendar' ? 'Agendar horário' : 'Salvar encaixe';
     $('#enc-ok').dataset.foraHorario = '';
   }
-  // WhatsApp: só números, no máximo 11 (DDD + celular), já formatado
+  // Telefone: só números, no máximo 11 (DDD + celular), já formatado
   $('#enc-fone').addEventListener('input', function (e) {
     if (e.inputType && e.inputType.indexOf('delete') === 0) return; // deixa apagar à vontade
     this.value = fone(this.value.replace(/\D/g, '').slice(0, 11));
@@ -603,7 +603,7 @@
       confirmarForaHorario: $('#enc-ok').dataset.foraHorario === '1',
     };
     var digitos = dados.fone.replace(/\D/g, '');
-    var falta = !dados.nome ? 'Informe o nome da cliente.' : !digitos ? 'Informe o WhatsApp da cliente (é obrigatório).' : digitos.length < 10 || digitos.length > 11 ? 'Confira o WhatsApp: DDD + número, por exemplo (77) 99999-0000.'
+    var falta = !dados.nome ? 'Informe o nome da cliente.' : !digitos ? 'Informe o telefone da cliente (é obrigatório).' : digitos.length < 10 || digitos.length > 11 ? 'Confira o telefone: DDD + número, por exemplo (77) 99999-0000.'
       : dados.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(dados.email) ? 'Confira o e-mail (ou deixe em branco).' : !dados.servicos.length ? 'Escolha pelo menos um serviço.' : !dados.prof ? 'Ninguém faz todos esses serviços juntos. Marque em dois atendimentos.' : !dados.data ? 'Informe o dia.'
       : !dados.hora ? (agendar ? 'Escolha um dos horários livres.' : 'Informe o horário.') : '';
     if (falta) { $('#enc-aviso').innerHTML = '<div class="aviso aviso--erro">' + esc(falta) + '</div>'; $('#enc-aviso').scrollIntoView({ block: 'nearest' }); return; }
@@ -632,7 +632,7 @@
 
   /* ---------- busca de clientes (Novo atendimento) ---------- */
   // Digite "cl" e aparecem as clientes com alguma palavra do nome começando por "cl" (sem ligar para acento).
-  // Ao escolher, o WhatsApp e o e-mail já vêm preenchidos.
+  // Ao escolher, o telefone e o e-mail já vêm preenchidos.
   var CLIENTES = null, clientesEm = 0, sug = [], sugIdx = -1, escolhida = null;
   function carregarClientes() {
     if (CLIENTES && Date.now() - clientesEm < 300000) return Promise.resolve(CLIENTES);

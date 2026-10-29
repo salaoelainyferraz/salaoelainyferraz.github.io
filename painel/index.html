@@ -119,13 +119,13 @@
       <div class="dlg__body">
         <div class="linha2">
           <div class="f">
-            <label for="enc-nome">Nome da cliente <small>(digite para achar quem já veio)</small></label>
+            <label for="enc-nome">Nome da cliente</label>
             <div class="busca">
-              <input class="input" id="enc-nome" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="enc-sug" placeholder="Ex.: Cláudia">
+              <input class="input" id="enc-nome" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="enc-sug">
               <ul class="sug" id="enc-sug" role="listbox" aria-label="Clientes já cadastradas" hidden></ul>
             </div>
           </div>
-          <label class="f">WhatsApp<input class="input" id="enc-fone" type="tel" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="(77) 99999-0000"></label>
+          <label class="f">Telefone<input class="input" id="enc-fone" type="tel" inputmode="numeric" autocomplete="off" maxlength="16" placeholder="(77) 99999-0000"></label>
         </div>
         <div id="enc-cliente" class="cliente-info" hidden></div>
         <div><div class="rot">Serviços</div><div class="servs" id="enc-servs"></div></div>
@@ -142,7 +142,7 @@
         <div id="enc-aviso" aria-live="assertive"></div>
       </div>
       <div class="dlg__foot">
-        <span class="dica esq">Obrigatórios: nome e WhatsApp.</span>
+        <span class="dica esq">Obrigatórios: nome e telefone.</span>
         <button class="btn btn--ghost" type="button" data-fechar>Voltar</button>
         <button class="btn" type="submit" id="enc-ok">Agendar horário</button>
       </div>

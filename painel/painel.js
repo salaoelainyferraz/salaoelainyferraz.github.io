@@ -192,7 +192,7 @@
       $('#dia-label').textContent = D.data === D.hoje ? 'Hoje, ' + ext : ext.charAt(0).toUpperCase() + ext.slice(1);
     }
     if (D.usuario) $('#quem-nome').textContent = D.usuario.nome;
-    $('#btn-precos').hidden = $('#btn-equipe').hidden = !podeTudo();
+    $('#btn-precos').hidden = $('#btn-equipe').hidden = $('#btn-horario').hidden = !podeTudo();
     $('#chips').hidden = D.profissionais.length < 2;
     document.title = 'Painel · ' + ext;
 
@@ -794,9 +794,9 @@
       .catch(function (e) { corpo.innerHTML = '<div class="aviso aviso--erro">' + esc(msgErro(e)) + '</div>'; });
   }
   function abrirSalao(modo) {
-    modoSalao = modo; editandoProf = null; novoAcesso = false; boasVindas = null; avisoEquipe = ''; avisoPrecos = ''; catEditando = catExcluindo = '';
-    $('#salao-h').textContent = modo === 'precos' ? 'Serviços e preços' : 'Equipe e acessos';
-    $('#salao-dica').textContent = modo === 'precos' ? 'O que você salvar aqui aparece no site na hora.' : 'Quem está ativa na equipe aparece no site para as clientes escolherem.';
+    modoSalao = modo; editandoProf = null; novoAcesso = false; boasVindas = null; avisoEquipe = ''; avisoPrecos = ''; avisoHorario = ''; catEditando = catExcluindo = '';
+    $('#salao-h').textContent = modo === 'precos' ? 'Serviços e preços' : modo === 'horario' ? 'Horário de funcionamento' : 'Equipe e acessos';
+    $('#salao-dica').textContent = modo === 'precos' ? 'O que você salvar aqui aparece no site na hora.' : modo === 'horario' ? 'O site e os horários livres seguem este horário.' : 'Quem está ativa na equipe aparece no site para as clientes escolherem.';
     $('#salao-corpo').innerHTML = CFG ? '' : '<p class="dica">Carregando…</p>';
     if (CFG) renderSalao();
     $('#dlg-salao').showModal();
@@ -804,13 +804,66 @@
   }
   $('#btn-precos').addEventListener('click', function () { abrirSalao('precos'); });
   $('#btn-equipe').addEventListener('click', function () { abrirSalao('equipe'); });
+  $('#btn-horario').addEventListener('click', function () { abrirSalao('horario'); });
   function renderSalao() {
     if (modoSalao === 'precos') renderServicos();
+    else if (modoSalao === 'horario') renderHorario();
     else if (boasVindas) renderBoasVindas();
     else if (editandoProf) renderFormProf();
     else if (novoAcesso) renderFormAcesso();
     else renderEquipe();
   }
+  /* Horário de funcionamento (só a Elainy e o administrador) */
+  var avisoHorario = '';
+  function renderHorario() {
+    var linhas = (CFG.horario || []).map(function (h) {
+      return '<div class="hor' + (h.aberto ? '' : ' hor--fechado') + '" data-hdia="' + h.dia + '">' +
+        '<label class="hor__dia"><input type="checkbox" data-k="aberto"' + (h.aberto ? ' checked' : '') + '> <b>' + esc(h.nome) + '</b><small>' + (h.aberto ? 'aberto' : 'fechado') + '</small></label>' +
+        '<div class="hor__campos">' +
+          '<label class="f">Abre<input class="input" type="time" step="1800" data-k="abre" value="' + esc(h.abre) + '"' + (h.aberto ? '' : ' disabled') + '></label>' +
+          '<label class="f">Fecha<input class="input" type="time" step="1800" data-k="fecha" value="' + esc(h.fecha) + '"' + (h.aberto ? '' : ' disabled') + '></label>' +
+          '<label class="f">Almoço: de<input class="input" type="time" step="1800" data-k="pausaIni" value="' + esc(h.pausaIni) + '"' + (h.aberto ? '' : ' disabled') + '></label>' +
+          '<label class="f">até<input class="input" type="time" step="1800" data-k="pausaFim" value="' + esc(h.pausaFim) + '"' + (h.aberto ? '' : ' disabled') + '></label>' +
+        '</div></div>';
+    }).join('');
+    $('#salao-corpo').innerHTML = (avisoHorario ? avisoHorario : '') +
+      '<details class="como"><summary>Como funciona</summary><ul>' +
+        '<li>Marque os dias em que o salão abre e mude a hora de abrir e de fechar.</li>' +
+        '<li><b>Almoço</b> é opcional: nesse intervalo ninguém marca horário. Deixe em branco se não tiver.</li>' +
+        '<li>Toque em <b>Salvar horário</b>. O site passa a mostrar os horários novos na hora.</li>' +
+        '<li>Quem já está marcado continua marcado. Se alguém ficar fora do horário novo, o painel avisa para você remarcar.</li>' +
+        '<li>Cada profissional ainda pode ter os dias e horários dela, em <b>Equipe</b> &gt; <b>Editar</b>.</li></ul></details>' +
+      linhas +
+      '<div class="hor__pe"><button class="btn" type="button" id="hor-salvar">Salvar horário</button></div>';
+  }
+  $('#salao-corpo').addEventListener('change', function (e) {
+    var ab = e.target.closest('.hor [data-k="aberto"]');
+    if (!ab) return;
+    var linha = ab.closest('.hor');
+    linha.classList.toggle('hor--fechado', !ab.checked);
+    $('small', ab.closest('label')).textContent = ab.checked ? 'aberto' : 'fechado';
+    $$('input[type=time]', linha).forEach(function (i) { i.disabled = !ab.checked; });
+  });
+  $('#salao-corpo').addEventListener('click', function (e) {
+    var bt = e.target.closest('#hor-salvar');
+    if (!bt) return;
+    var lista = $$('#salao-corpo .hor').map(function (l) {
+      var v = function (k) { return $('[data-k="' + k + '"]', l).value; };
+      return { dia: Number(l.dataset.hdia), aberto: $('[data-k="aberto"]', l).checked, abre: v('abre'), fecha: v('fecha'), pausaIni: v('pausaIni'), pausaFim: v('pausaFim') };
+    });
+    bt.disabled = true;
+    rodar('salvarHorarioSalao', lista).then(function (r) {
+      avisoHorario = '<div class="aviso aviso--ok">✅ Horário salvo. O site já mostra os horários novos.</div>' +
+        (r.fora && r.fora.length ? '<div class="aviso aviso--warn">⚠️ ' + (r.fora.length === 1 ? 'Este atendimento já marcado ficou' : 'Estes ' + r.fora.length + ' atendimentos já marcados ficaram') +
+          ' fora do horário novo. Eles continuam marcados; remarque se precisar: ' + r.fora.slice(0, 8).map(esc).join('; ') + (r.fora.length > 8 ? ' e mais ' + (r.fora.length - 8) : '') + '.</div>' : '');
+      avisarSite();
+      toast('Horário salvo');
+      delete MESES_MEM[D.data.slice(0, 7)];
+      carregar(null, true);
+      return carregarSalao().then(function () { $('#salao-corpo').scrollTop = 0; });
+    }).catch(function (er) { bt.disabled = false; toast(msgErro(er), true); });
+  });
+
   function depoisDeSalvar(msg) {
     toast(msg);
     avisarSite();

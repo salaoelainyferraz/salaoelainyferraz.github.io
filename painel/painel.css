@@ -396,3 +396,15 @@ div.f small { font-weight: 400; color: var(--muted); }
 .aviso--juntos b:first-child { display: block; margin-bottom: 4px; }
 .card--juntas { box-shadow: inset 4px 0 0 #d9a441; }
 .juntas { margin: 6px 0 0; padding: 4px 8px; border-radius: 8px; background: var(--warn-50); color: var(--warn); font-size: 0.8rem; font-weight: 600; text-align: left; }
+
+/* Horário de funcionamento */
+.hor { padding: 12px 0; border-bottom: 1px dashed var(--line); }
+.hor__dia { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; }
+.hor__dia input { width: 20px; height: 20px; accent-color: var(--brand); }
+.hor__dia small { color: var(--muted); font-size: 0.82rem; }
+.hor__campos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.hor__campos label.f { font-size: 0.78rem; font-weight: 400; color: var(--muted); }
+.hor__campos .input { min-height: 40px; }
+.hor--fechado .hor__campos { opacity: 0.45; }
+.hor__pe { padding: 14px 0 4px; display: flex; justify-content: flex-end; }
+@media (max-width: 600px) { .hor__campos { grid-template-columns: 1fr 1fr; } }

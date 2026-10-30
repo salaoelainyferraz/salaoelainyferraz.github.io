@@ -152,23 +152,34 @@
   function carregar(data, silencioso) {
     var alvo = data || dataAtual;
     dataAlvo = alvo;
-    var mem = alvo && DIAS_MEM[alvo];
+    var mem = alvo && DIAS_MEM[alvo] && DIAS_MEM[alvo].d ? DIAS_MEM[alvo] : null;
     if (mem && !silencioso) { mostrar(mem.d); silencioso = true; } // aparece na hora; a conferência vem logo atrás
-    if (!silencioso) $('#main').classList.add('carregando');
+    if (!silencioso) {
+      $('#main').classList.add('carregando');
+      if (alvo && D && alvo !== D.data) mostrarDataAlvo(alvo); // a data escolhida já aparece no topo enquanto carrega
+    }
     return rodar('painelDia', alvo).then(function (d) {
       guardarNaMemoria(d);
       if (alvo && d.data !== dataAlvo) return; // a pessoa já foi para outro dia
       mostrar(d);
       if (d.data === d.hoje) guardarDia(d);
-      preCarregar(somaDias(d.data, 1)); preCarregar(somaDias(d.data, -1));
+      preCarregar([somaDias(d.data, -1), somaDias(d.data, 1), somaDias(d.data, 2), somaDias(d.data, 3)]);
     }).catch(function (e) { if (!/SESSAO/.test(e && e.message || '')) toast('Não foi possível carregar: ' + msgErro(e), true); })
       .then(function () { $('#main').classList.remove('carregando'); });
   }
-  // Busca o dia vizinho sem mostrar (as setas ← → ficam instantâneas)
-  function preCarregar(data) {
-    var mem = DIAS_MEM[data];
-    if (mem && Date.now() - mem.t < 120000) return;
-    rodar('painelDia', data).then(guardarNaMemoria).catch(function () { /* tenta quando ela for para lá */ });
+  // Deixa prontos os dias vizinhos (o anterior e os 3 seguintes) numa chamada só: as setas ← → ficam instantâneas
+  function preCarregar(datas) {
+    var faltam = datas.filter(function (x) { var mem = DIAS_MEM[x]; return !(mem && Date.now() - mem.t < 120000); });
+    if (!faltam.length) return;
+    faltam.forEach(function (x) { DIAS_MEM[x] = DIAS_MEM[x] || { d: null, t: Date.now() }; }); // evita pedir duas vezes
+    rodar('painelDias', faltam).then(function (lista) { lista.forEach(guardarNaMemoria); })
+      .catch(function () { faltam.forEach(function (x) { if (DIAS_MEM[x] && !DIAS_MEM[x].d) delete DIAS_MEM[x]; }); });
+  }
+  function mostrarDataAlvo(alvo) {
+    var dd = parse(alvo), ext = extenso(alvo);
+    $('#dia-label').textContent = window.innerWidth <= 600
+      ? DIAS[dd.getDay()].slice(0, 3) + ', ' + dd.getDate() + ' ' + MESES[dd.getMonth()].slice(0, 3)
+      : ext.charAt(0).toUpperCase() + ext.slice(1);
   }
 
   /* ---------- tela principal ---------- */

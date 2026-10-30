@@ -224,6 +224,7 @@
     }
 
     var mostrar = visao === 'afazer' ? aFazer : aFazer.concat(feitos);
+    marcarJuntos(D.atendimentos);
     var itens = mostrar.map(function (a) { return { hora: a.hora, html: cardHTML(a, a === destaque) }; })
       .concat(bloq.map(function (b) { return { hora: b.ini || '00:00', html: bloqHTML(b) }; })) // bloqueios aparecem nas duas visões
       .sort(function (x, y) { return x.hora < y.hora ? -1 : x.hora > y.hora ? 1 : 0; });
@@ -240,6 +241,23 @@
     $('#grade').innerHTML = html;
   }
 
+  // Quantas clientes estão ao mesmo tempo com a mesma profissional (para o alerta "⚠️ 2 clientes juntas" no card)
+  function marcarJuntos(lista) {
+    var passos = [];
+    lista.forEach(function (a) {
+      a.juntas = 0;
+      if (A_FAZER.indexOf(a.status) < 0 && a.status !== 'Concluído') return;
+      (a.roteiro || []).forEach(function (s) { if (s.ini && s.fim) passos.push({ a: a, prof: s.profId || s.prof, ini: s.ini, fim: s.fim }); });
+    });
+    passos.forEach(function (p) {
+      var com = {}; com[p.a.token] = true;
+      passos.forEach(function (q) { if (q.prof === p.prof && q.ini < p.fim && q.fim > p.ini) com[q.a.token] = true; });
+      var n = Object.keys(com).length;
+      if (n > p.a.juntas) p.a.juntas = n;
+    });
+    lista.forEach(function (a) { if (a.juntas < 2) a.juntas = 0; });
+  }
+
   function tile(v, l, gold) { return '<div class="tile' + (gold ? ' tile--gold' : '') + '"><b>' + v + '</b><span>' + l + '</span></div>'; }
 
   function cardHTML(a, agora) {
@@ -251,8 +269,9 @@
     var valor = pago ? brl(a.valorPago != null ? a.valorPago : a.valor) : brl(a.valor);
     var pagPill = falta ? '<span class="pill pill--pendente">não cobrado</span>' : a.status === 'Cancelado' ? '' :
       '<span class="pill pill--' + (pago ? 'pago' : 'pendente') + '">' + (pago ? 'Pago · ' + esc(a.forma) : 'A receber') + '</span>';
-    return '<button type="button" class="card st-' + CLASSE[a.status] + (agora ? ' card--agora' : '') + '" data-ficha="' + esc(a.token) + '" aria-label="' + esc(a.hora + ', ' + a.cliente + ', ' + ROTULO[a.status]) + '. Abrir ficha">' +
+    return '<button type="button" class="card st-' + CLASSE[a.status] + (agora ? ' card--agora' : '') + (a.juntas ? ' card--juntas' : '') + '" data-ficha="' + esc(a.token) + '" aria-label="' + esc(a.hora + ', ' + a.cliente + ', ' + ROTULO[a.status]) + '. Abrir ficha">' +
       '<div class="card__status"><span><i></i>' + ROTULO[a.status] + '</span>' + (agora ? '<span class="agora-tag">' + (a.status === 'Em atendimento' ? 'agora' : 'próxima') + '</span>' : '') + '</div>' +
+      (a.juntas ? '<div class="juntas" title="Mais de uma cliente ao mesmo tempo com a mesma profissional">⚠️ ' + a.juntas + ' clientes juntas neste horário</div>' : '') +
       '<div class="card__corpo">' +
         '<div class="card__hora"><b>' + esc(a.hora) + '</b><small>até ' + esc(a.fim) + '</small></div>' +
         '<div class="card__cliente">' + esc(a.cliente) + (TAG_ORIGEM[a.origem] ? ' <span class="tag">' + TAG_ORIGEM[a.origem] + '</span>' : '') + (primeiraVez(a) ? ' <span class="tag">1ª vez</span>' : '') + '</div>' +
@@ -575,18 +594,25 @@
     if (!d.data) { box.innerHTML = '<p>Escolha o dia.</p>'; return; }
     var minha = ++buscaLivres;
     box.innerHTML = '<p>Procurando horários livres…</p>';
-    rodar('horariosLivres', d).then(function (lista) {
+    d.comJuntos = true;
+    rodar('horariosLivres', d).then(function (r) {
       if (minha !== buscaLivres) return; // o usuário mudou algo nesse meio-tempo
-      box.innerHTML = lista.length
-        ? lista.map(function (h) { return '<button type="button" aria-pressed="false" data-h="' + h + '">' + h + '</button>'; }).join('')
-        : '<p>Nenhum horário livre nesse dia para esses serviços. Tente outro dia ou outra profissional, ou use a aba <b>Encaixe</b>.</p>';
+      var livres = Array.isArray(r) ? r : r.livres, juntos = Array.isArray(r) ? [] : r.juntos;
+      var todos = livres.concat(juntos).sort();
+      box.innerHTML = todos.length
+        ? todos.map(function (h) {
+            return juntos.indexOf(h) >= 0
+              ? '<button type="button" class="junto" aria-pressed="false" data-h="' + h + '" title="Já tem cliente nesse horário">' + h + '<small>⚠️ já tem cliente</small></button>'
+              : '<button type="button" aria-pressed="false" data-h="' + h + '">' + h + '</button>';
+          }).join('') + (juntos.length ? '<p class="livres__leg">⚠️ = já tem cliente nesse horário. Dá para marcar junto: o painel pede confirmação.</p>' : '')
+        : '<p>Nenhum horário nesse dia para esses serviços (fora do expediente ou bloqueado). Tente outro dia ou outra profissional, ou use a aba <b>Encaixe</b>.</p>';
     }).catch(function (e) { if (minha === buscaLivres) box.innerHTML = '<p>Não consegui buscar os horários: ' + esc(msgErro(e)) + '</p>'; });
   }
   $('#enc-livres').addEventListener('click', function (e) {
     var b = e.target.closest('[data-h]'); if (!b) return;
     horaEscolhida = b.dataset.h;
     $$('button', this).forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
-    $('#enc-aviso').innerHTML = '';
+    resetEncaixe();
   });
   $('#enc-servs').addEventListener('change', function () { atualizarProfsEncaixe(); carregarLivres(); });
   $('#enc-prof').addEventListener('change', carregarLivres);
@@ -595,6 +621,7 @@
     $('#enc-aviso').innerHTML = '';
     $('#enc-ok').textContent = tipoNovo === 'agendar' ? 'Agendar horário' : 'Salvar encaixe';
     $('#enc-ok').dataset.foraHorario = '';
+    $('#enc-ok').dataset.juntos = '';
   }
   // Telefone: só números, no máximo 11 (DDD + celular), já formatado
   $('#enc-fone').addEventListener('input', function (e) {
@@ -603,7 +630,7 @@
   });
   $('#form-enc').addEventListener('input', function (e) {
     if (e.target.closest('#enc-livres')) return;
-    if ($('#enc-ok').dataset.foraHorario || $('#enc-aviso').innerHTML) resetEncaixe();
+    if ($('#enc-ok').dataset.foraHorario || $('#enc-ok').dataset.juntos || $('#enc-aviso').innerHTML) resetEncaixe();
   });
   $('#form-enc').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -612,6 +639,7 @@
       tipo: tipoNovo, nome: $('#enc-nome').value.trim(), fone: $('#enc-fone').value, email: $('#enc-email').value.trim(), prof: $('#enc-prof').value,
       servicos: servsEscolhidos(), data: $('#enc-data').value, hora: agendar ? horaEscolhida : $('#enc-hora').value, obs: $('#enc-obs').value,
       confirmarForaHorario: $('#enc-ok').dataset.foraHorario === '1',
+      confirmarJuntos: $('#enc-ok').dataset.juntos === '1',
     };
     var digitos = dados.fone.replace(/\D/g, '');
     var falta = !dados.nome ? 'Informe o nome da cliente.' : !digitos ? 'Informe o telefone da cliente (é obrigatório).' : digitos.length < 10 || digitos.length > 11 ? 'Confira o telefone: DDD + número, por exemplo (77) 99999-0000.'
@@ -621,6 +649,14 @@
     $('#enc-ok').disabled = true;
     rodar('criarEncaixe', dados).then(function (r) {
       $('#enc-ok').disabled = false;
+      if (r && r.juntos) {
+        $('#enc-aviso').innerHTML = '<div class="aviso aviso--warn aviso--juntos"><b>⚠️ Atendimento junto com outra cliente</b>' + esc(r.mensagem) +
+          '<br>Confira se dá para fazer os serviços ao mesmo tempo. Se der, toque em <b>Marcar junto mesmo assim</b>. No painel, os atendimentos desse horário vão aparecer com um aviso ⚠️.</div>';
+        $('#enc-ok').textContent = 'Marcar junto mesmo assim';
+        $('#enc-ok').dataset.juntos = '1';
+        $('#enc-aviso').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
       if (r && r.foraDoHorario) {
         $('#enc-aviso').innerHTML = '<div class="aviso aviso--warn">⚠️ ' + esc(r.mensagem) + ' Confirme só se ela vai mesmo atender nesse horário.</div>';
         $('#enc-ok').textContent = 'Salvar mesmo fora do horário';
@@ -847,7 +883,7 @@
           '<div class="srv__nome"><b>' + esc(s.nome) + '</b>' + (s.ativo ? '' : '<small>Escondido do site</small>') + (s.descricao ? '<small>' + esc(s.descricao) + '</small>' : '') + '</div>' +
           '<label class="f">Categoria<select class="input" data-k="categoria">' + opcoesCategorias(s.categoria) + '</select></label>' +
           '<label class="f">Preço (R$)<input class="input" data-k="preco" type="number" inputmode="decimal" min="0" step="0.01" value="' + (s.preco == null ? '' : s.preco) + '" placeholder="sob consulta"></label>' +
-          '<label class="f">Tempo (min)<input class="input" data-k="duracao" type="number" inputmode="numeric" min="5" max="600" step="5" value="' + s.duracao + '"></label>' +
+          '<label class="f">Duração (minutos)<input class="input" data-k="duracao" type="number" inputmode="numeric" min="5" max="600" step="5" value="' + s.duracao + '"></label>' +
           '<label class="check" title="No site aparece &quot;a partir de&quot; antes do preço"><input type="checkbox" data-k="aPartirDe"' + (s.aPartirDe ? ' checked' : '') + '> A partir de</label>' +
           '<label class="check" title="Desmarque para esconder do site"><input type="checkbox" data-k="ativo"' + (s.ativo ? ' checked' : '') + '> No site</label>' +
           '<button class="btn btn--sm" type="button" data-salvar-srv disabled>Salvar</button>' +
@@ -857,14 +893,14 @@
     $('#salao-corpo').innerHTML =
       (avisoPrecos ? '<div class="aviso aviso--ok">✅ ' + esc(avisoPrecos) + '</div>' : '') +
       blocoCategorias() +
-      '<div class="topo-lista"><p>Mude o preço, o tempo ou a categoria e toque em <b>Salvar</b> na mesma linha. Desmarque <b>No site</b> para esconder um serviço.</p>' +
+      '<div class="topo-lista"><p>Mude o preço, a duração (quanto tempo o serviço leva) ou a categoria e toque em <b>Salvar</b> na mesma linha. Desmarque <b>No site</b> para esconder um serviço.</p>' +
         '<button class="btn btn--ghost btn--sm" type="button" id="srv-novo">+ Novo serviço</button></div>' +
       '<div class="novo-srv" id="srv-form" hidden>' +
         '<div class="linha2"><label class="f">Nome do serviço<input class="input" id="ns-nome" maxlength="60"></label>' +
           '<label class="f">Categoria<select class="input" id="ns-cat">' + opcoesCategorias(CFG.categorias[0]) + '</select></label></div>' +
         '<label class="f"><span>Descrição curta <small>(opcional, aparece no site)</small></span><input class="input" id="ns-desc" maxlength="140"></label>' +
         '<div class="linha2"><label class="f">Preço (R$)<input class="input" id="ns-preco" type="number" inputmode="decimal" min="0" step="0.01" placeholder="vazio = sob consulta"></label>' +
-          '<label class="f">Tempo (min)<input class="input" id="ns-dur" type="number" inputmode="numeric" min="5" max="600" step="5" value="60"></label></div>' +
+          '<label class="f">Duração (minutos)<input class="input" id="ns-dur" type="number" inputmode="numeric" min="5" max="600" step="5" value="60"></label></div>' +
         '<label class="check"><input type="checkbox" id="ns-apartir"> Preço "a partir de" (pode variar com o cabelo)</label>' +
         '<div id="ns-aviso"></div>' +
         '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn--ghost btn--sm" type="button" id="ns-cancelar">Cancelar</button><button class="btn btn--sm" type="button" id="ns-salvar">Adicionar serviço</button></div>' +

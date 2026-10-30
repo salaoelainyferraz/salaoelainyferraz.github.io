@@ -386,3 +386,13 @@ div.f small { font-weight: 400; color: var(--muted); }
 .cat-caixa--bad span { color: var(--bad); font-size: 0.9rem; }
 .cat-nova { padding-left: 0; padding-top: 10px; }
 @media (max-width: 600px) { .cat-caixa { padding-left: 0; } .cat-linha { flex-wrap: wrap; } }
+
+/* Mais de uma cliente no mesmo horário com a mesma profissional */
+.livres button.junto { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; border-style: dashed; border-color: #d9a441; background: var(--warn-50); }
+.livres button.junto small { font-size: 0.66rem; color: var(--warn); }
+.livres button.junto[aria-pressed=true] { background: var(--warn); border-color: var(--warn); color: #fff; }
+.livres button.junto[aria-pressed=true] small { color: #fff; }
+.livres .livres__leg { flex-basis: 100%; margin-top: 4px; font-size: 0.82rem; }
+.aviso--juntos b:first-child { display: block; margin-bottom: 4px; }
+.card--juntas { box-shadow: inset 4px 0 0 #d9a441; }
+.juntas { margin: 6px 0 0; padding: 4px 8px; border-radius: 8px; background: var(--warn-50); color: var(--warn); font-size: 0.8rem; font-weight: 600; text-align: left; }

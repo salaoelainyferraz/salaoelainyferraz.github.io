@@ -212,7 +212,7 @@
       inp.addEventListener('change', () => {
         if (inp.checked) st.servicos.push(inp.value);
         else st.servicos = st.servicos.filter((id) => id !== inp.value);
-        st.date = st.hora = null;
+        st.date = st.hora = st.horaCheia = null;
         barServicos();
       })
     );
@@ -262,7 +262,7 @@
     app.querySelectorAll('input[type=radio]').forEach((inp) =>
       inp.addEventListener('change', () => {
         st.prefs[inp.dataset.serv] = inp.value;
-        st.date = st.hora = null;
+        st.date = st.hora = st.horaCheia = null;
       })
     );
     setBar('<strong>Profissionais</strong><span>Pode mudar depois</span>', 'Continuar', true, () => ir('horario'));
@@ -329,7 +329,7 @@
       const b = e.target.closest('.day');
       if (!b || b.disabled) return;
       st.date = b.dataset.date;
-      st.hora = null;
+      st.hora = st.horaCheia = null;
       days.querySelectorAll('.day').forEach((x) => x.setAttribute('aria-pressed', x === b));
       carregarSlots();
       barHorario();
@@ -349,13 +349,15 @@
     try {
       if (!st.slots[key]) {
         const r = await api.slots(date, st.servicos, prefsAtivas(), excluir());
-        st.slots[key] = { horarios: r.horarios, planos: r.planos };
+        st.slots[key] = { horarios: r.horarios, planos: r.planos, cheios: (!st.reagendar && r.cheios) || [] };
       }
     } catch (e) {
       return erroConexao(wrap, carregarSlots);
     }
     if (st.date !== date || !$('#slots-wrap')) return; // trocou de dia enquanto carregava
-    const lista = st.slots[key].horarios;
+    const livres = st.slots[key].horarios;
+    const cheios = new Set(st.slots[key].cheios || []);
+    const lista = livres.concat([...cheios]).sort();
     if (!lista.length) {
       wrap.innerHTML = `<div class="state"><div class="state__icon">${I.cal}</div><h2>Esse dia lotou</h2><p>Os horários acabaram de ser preenchidos. Escolha outro dia acima.</p></div>`;
       return;
@@ -369,12 +371,23 @@
       <div class="period">
         <div class="period__title">${icon}${nome}</div>
         <div class="slots" role="group" aria-label="${nome}">
-          ${hs.map((h) => `<button type="button" class="slot" data-hora="${h}" aria-pressed="${h === st.hora}">${h}</button>`).join('')}
+          ${hs.map((h) => cheios.has(h)
+            ? `<button type="button" class="slot slot--cheio" data-cheio="${h}" aria-pressed="${h === st.horaCheia}" aria-label="${h}, já tem cliente: pedir encaixe pelo WhatsApp">${h}<small>consultar</small></button>`
+            : `<button type="button" class="slot" data-hora="${h}" aria-pressed="${h === st.hora}">${h}</button>`).join('')}
         </div>
-      </div>`).join('') + '<div id="roteiro"></div>';
+      </div>`).join('') + (cheios.size ? '<p class="slots-legenda"><span class="slot-mini"></span>Horários com <b>consultar</b> já têm cliente. Toque para pedir um encaixe pelo WhatsApp.</p>' : '') + '<div id="roteiro"></div>';
     wrap.onclick = (e) => {
       const b = e.target.closest('.slot');
       if (!b) return;
+      if (b.dataset.cheio) {
+        st.hora = null;
+        st.horaCheia = b.dataset.cheio;
+        wrap.querySelectorAll('.slot').forEach((x) => x.setAttribute('aria-pressed', x === b));
+        mostrarCheio();
+        barHorario();
+        return;
+      }
+      st.horaCheia = null;
       st.hora = b.dataset.hora;
       wrap.querySelectorAll('.slot').forEach((x) => x.setAttribute('aria-pressed', x === b));
       mostrarRoteiro();
@@ -383,11 +396,39 @@
     mostrarRoteiro();
   }
 
+  /**
+   * Horário que já tem cliente: não marca pelo site. Orienta a mandar uma mensagem pronta no WhatsApp,
+   * e o salão vê se dá para atender junto ou sugere outro horário.
+   */
+  function mostrarCheio() {
+    const el = $('#roteiro');
+    if (!el) return;
+    const servs = servicosEscolhidos().map((s) => s.nome).join(' + ');
+    const msg = `Olá! Vim pelo site e gostaria de um *encaixe*:
+
+💇 Serviço: ${servs}
+📅 Dia: ${fmt.extenso(st.date)}
+🕘 Horário: ${st.horaCheia}
+
+Vi que esse horário já tem cliente marcada. Dá para me atender junto ou em outro horário próximo?
+
+Meu nome: `;
+    el.innerHTML = `<div class="cheio" role="status" aria-live="polite">
+      <div class="cheio__titulo">${I.info}<span>Às ${esc(st.horaCheia)} já tem cliente marcada</span></div>
+      <p>Às vezes dá para atender duas clientes juntas. Isso depende do serviço. Mande uma mensagem para o salão: a gente confere e responde se dá para te encaixar nesse horário ou sugere outro.</p>
+      <p class="cheio__passos"><b>1.</b> Toque no botão abaixo. A mensagem já vai pronta.<br><b>2.</b> Escreva seu nome no final e envie.</p>
+      ${botaoWhats(msg)}
+      <p class="cheio__ou">Prefere marcar na hora? Escolha um horário sem "consultar".</p>
+    </div>`;
+    el.querySelector('.cheio').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
   /** Mostra "quem faz o quê e quando" logo abaixo dos horários — transparência para a cliente. */
   function mostrarRoteiro() {
     const el = $('#roteiro');
     const plano = planoAtual();
     if (!el) return;
+    if (st.horaCheia && !plano) return mostrarCheio();
     if (!plano || (plano.length === 1 && C.profissionais.length === 1)) {
       el.innerHTML = '';
       return;
@@ -402,7 +443,9 @@
   function barHorario() {
     const info = planoAtual()
       ? `<strong>${dataCurta(st.date)} · ${st.hora}</strong><span>termina por volta de ${horaFim()}</span>`
-      : '<strong>Escolha um horário</strong><span>Só aparecem horários livres</span>';
+      : st.horaCheia
+        ? `<strong>${dataCurta(st.date)} · ${st.horaCheia}</strong><span>Peça o encaixe pelo WhatsApp</span>`
+        : '<strong>Escolha um horário</strong><span>Toque no horário que preferir</span>';
     setBar(info, 'Continuar', !!planoAtual(), () => ir(proximo('horario')));
   }
 
@@ -675,7 +718,7 @@
     st.servicos = b.servicoIds.slice();
     st.prefs = {};
     st.dados = { nome: b.nome };
-    st.date = st.hora = null;
+    st.date = st.hora = st.horaCheia = null;
     st.slots = {};
     st.dias = null;
     ir('horario', true);

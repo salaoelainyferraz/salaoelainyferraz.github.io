@@ -460,6 +460,20 @@ body.sem-rolagem { overflow: hidden; }
 }
 .slot:hover { border-color: var(--brand); color: var(--brand); }
 .slot[aria-pressed='true'] { background: var(--gold-grad); border-color: transparent; color: #fff; }
+/* Horário que já tem cliente: pede encaixe pelo WhatsApp */
+.slot--cheio { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; border-style: dashed; border-color: #c9a96a; background: #faf6ee; color: var(--ink-2); }
+.slot--cheio small { font-size: 0.68rem; font-weight: 500; color: var(--muted); letter-spacing: 0.02em; }
+.slot--cheio[aria-pressed='true'] { background: #fff4dc; border: 1.5px solid var(--brand); color: var(--brand); }
+.slot--cheio[aria-pressed='true'] small { color: var(--brand); }
+.slots-legenda { margin-top: 14px; font-size: 0.84rem; line-height: 1.5; color: var(--muted); }
+.slot-mini { display: inline-block; vertical-align: -2px; width: 18px; height: 14px; margin-right: 6px; border-radius: 4px; border: 1.5px dashed #c9a96a; background: #faf6ee; }
+.cheio { margin-top: 22px; padding: 18px; border-radius: var(--radius); background: #fff; border: 1.5px solid #e6d5b0; animation: stepIn .35s var(--ease); }
+.cheio__titulo { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--brand); margin-bottom: 8px; }
+.cheio__titulo svg { width: 20px; height: 20px; flex: none; }
+.cheio p { color: var(--ink-2); font-size: 0.93rem; margin: 0 0 12px; }
+.cheio__passos { background: #faf6ee; border-radius: var(--radius-sm); padding: 10px 12px; }
+.cheio .btn { width: 100%; justify-content: center; }
+.cheio .cheio__ou { margin: 12px 0 0; font-size: 0.84rem; color: var(--muted); text-align: center; }
 .period { margin-top: 20px; }
 .period:first-child { margin-top: 0; }
 .period__title { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 0.9rem; color: var(--ink-2); margin-bottom: 10px; }

@@ -89,7 +89,7 @@
   const demo = {
     wait: (ms = 450) => new Promise((r) => setTimeout(r, ms)),
     servicos: (ids) => ids.map((id) => S.fallback.servicos.find((s) => s.id === id)).filter(Boolean),
-    planos(iso, ids, prefs) {
+    planos(iso, ids, prefs, semOcupados) {
       const fb = S.fallback;
       const wd = fmt.parse(iso).getDay();
       const escalas = {};
@@ -97,7 +97,7 @@
       // Simula alguns horários já ocupados de cada profissional (sempre os mesmos para o mesmo dia)
       const seed = Number(iso.replace(/-/g, '')) % 7;
       const ocupados = {};
-      fb.profissionais.forEach((p, i) => {
+      if (!semOcupados) fb.profissionais.forEach((p, i) => {
         ocupados[p.id] = [[(9 + ((seed + i) % 3)) * 60, (10 + ((seed + i) % 3)) * 60], [(15 + ((seed + i * 2) % 2)) * 60, (16 + ((seed + i * 2) % 2)) * 60]];
       });
       const agora = new Date();
@@ -152,19 +152,20 @@
         const hoje = new Date();
         for (let i = 0; i <= S.fallback.cfg.diasAFrente; i++) {
           const iso = fmt.iso(new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + i, 12));
-          if (Object.keys(demo.planos(iso, servicos, prefs)).length) dias.push(iso);
+          if (Object.keys(demo.planos(iso, servicos, prefs, !excluir)).length) dias.push(iso);
         }
         return { dias };
       }
       return get({ action: 'days', servicos: servicos.join(','), prefs: JSON.stringify(prefs || {}), excluir: excluir || '' });
     },
 
-    /** Horários livres num dia + o roteiro de cada um (quem faz o quê e quando). */
+    /** Horários livres num dia + o roteiro de cada um (quem faz o quê e quando) + os "cheios" (já têm cliente; vão pelo WhatsApp). */
     async slots(date, servicos, prefs, excluir) {
       if (DEMO) {
         await demo.wait(300);
         const planos = demo.planos(date, servicos, prefs);
-        return { date, horarios: Object.keys(planos).sort(), planos };
+        const cheios = excluir ? [] : Object.keys(demo.planos(date, servicos, prefs, true)).filter((h) => !planos[h]).sort();
+        return { date, horarios: Object.keys(planos).sort(), planos, cheios };
       }
       return get({ action: 'slots', date, servicos: servicos.join(','), prefs: JSON.stringify(prefs || {}), excluir: excluir || '' });
     },

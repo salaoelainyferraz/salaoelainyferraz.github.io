@@ -216,7 +216,7 @@ textarea.input { min-height: 74px; padding: 10px 12px; resize: vertical; }
 .topo-lista { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .topo-lista p { margin: 0; color: var(--muted); font-size: 0.92rem; flex: 1; min-width: 220px; }
 .cat-t { font-size: 0.74rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--brand); font-weight: 500; margin-top: 6px; }
-.srv { display: grid; grid-template-columns: minmax(150px, 1fr) 118px 104px auto auto auto; gap: 8px 12px; align-items: end; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.srv { display: grid; grid-template-columns: minmax(140px, 1fr) 160px 104px 92px auto auto auto; gap: 8px 12px; align-items: end; padding: 10px 0; border-bottom: 1px dashed var(--line); }
 .srv__nome { align-self: center; line-height: 1.3; }
 .srv__nome small { display: block; color: var(--muted); font-size: 0.8rem; }
 .srv--off .srv__nome b { color: var(--muted); text-decoration: line-through; }
@@ -318,13 +318,14 @@ div.f small { font-weight: 400; color: var(--muted); }
 #dlg-enc { width: min(660px, calc(100vw - 24px)); }
 .sug { min-width: min(330px, calc(100vw - 72px)); }
 .busca { position: relative; }
-.sug { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; margin: 0; padding: 6px; list-style: none; max-height: 270px; overflow: auto;
+.sug { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; margin: 0; padding: 6px; list-style: none; max-height: 300px; overflow: auto; overscroll-behavior: contain;
   background: #fff; border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 16px 40px rgb(31 26 18 / 0.16); font-weight: 400; }
 .sug li { display: grid; gap: 1px; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
 .sug li[aria-selected=true], .sug li[data-i]:hover { background: var(--brand-50); }
 .sug li b { font-weight: 400; }
 .sug li small { color: var(--muted); font-size: 0.82rem; }
 .sug mark { background: none; color: var(--brand); font-weight: 600; }
+.sug .sug__topo { cursor: default; padding: 4px 10px 6px; font-size: 0.78rem; letter-spacing: 0.06em; color: var(--muted); }
 .sug .sug__nova { cursor: default; color: var(--muted); font-size: 0.84rem; border-top: 1px dashed var(--line); border-radius: 0; margin-top: 4px; }
 .cliente-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: -4px; font-size: 0.88rem; color: var(--ink-2); }
 .cliente-info .ok { padding: 2px 10px; border-radius: 999px; background: var(--ok-50); color: var(--ok); font-weight: 500; }
@@ -370,3 +371,18 @@ div.f small { font-weight: 400; color: var(--muted); }
   .mes__qtd { min-width: 22px; padding: 0 6px; font-size: 0.74rem; }
   .com-botao { flex-wrap: wrap; }
 }
+
+/* Categorias (Preços) */
+.cats { display: grid; gap: 4px; }
+.cat-linha { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.cat-setas { display: flex; gap: 4px; }
+.icon--mini { width: 32px; height: 32px; font-size: 0.95rem; }
+.icon--mini[disabled] { opacity: .3; pointer-events: none; }
+.cat-nome { flex: 1; min-width: 0; display: grid; }
+.cat-nome b { font-weight: 500; }
+.cat-nome small { color: var(--muted); font-size: 0.8rem; }
+.cat-caixa { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0 10px 76px; }
+.cat-caixa .input { flex: 1; min-width: 160px; min-height: 40px; }
+.cat-caixa--bad span { color: var(--bad); font-size: 0.9rem; }
+.cat-nova { padding-left: 0; padding-top: 10px; }
+@media (max-width: 600px) { .cat-caixa { padding-left: 0; } .cat-linha { flex-wrap: wrap; } }

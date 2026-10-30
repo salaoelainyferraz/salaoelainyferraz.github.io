@@ -642,17 +642,19 @@
       return l;
     });
   }
+  // Já na 1ª letra aparece a lista (com rolagem): primeiro quem tem o 1º nome começando assim, depois o sobrenome
+  var MAX_SUG = 60;
   function buscar(txt) {
     var q = semAcento(txt).trim(), dig = String(txt).replace(/\D/g, '');
     if (!CLIENTES) return [];
-    if (dig.length >= 3) return CLIENTES.filter(function (c) { return c.f.indexOf(dig) >= 0; }).slice(0, 8);
-    if (q.length < 2) return [];
+    if (dig.length >= 3) return CLIENTES.filter(function (c) { return c.f.indexOf(dig) >= 0; }).slice(0, MAX_SUG);
+    if (!q) return [];
     var partes = q.split(/\s+/);
     return CLIENTES.map(function (c) {
       var palavras = semAcento(c.n).split(/\s+/);
       var ok = partes.every(function (p) { return palavras.some(function (w) { return w.indexOf(p) === 0; }); });
       return ok ? { c: c, rank: palavras[0].indexOf(partes[0]) === 0 ? 0 : 1 } : null;
-    }).filter(Boolean).sort(function (a, b) { return a.rank - b.rank || b.c.v - a.c.v; }).slice(0, 8).map(function (x) { return x.c; });
+    }).filter(Boolean).sort(function (a, b) { return a.rank - b.rank; }).slice(0, MAX_SUG).map(function (x) { return x.c; }); // a lista já vem em ordem alfabética
   }
   // Deixa em negrito o começo das palavras que bateram com o que foi digitado
   function realce(nome, txt) {
@@ -670,7 +672,7 @@
     sug = escolhida && escolhida.n === txt ? [] : buscar(txt);
     sugIdx = -1;
     if (!sug.length) { fecharSug(); return; }
-    lista.innerHTML = sug.map(function (c, i) {
+    lista.innerHTML = '<li class="sug__topo" aria-hidden="true">' + (sug.length >= MAX_SUG ? 'Mais de ' + MAX_SUG + ' clientes: continue digitando' : sug.length + (sug.length === 1 ? ' cliente encontrada' : ' clientes encontradas')) + '</li>' + sug.map(function (c, i) {
       return '<li role="option" id="sug-' + i + '" data-i="' + i + '" aria-selected="false"><b>' + realce(c.n, txt) + '</b><small>' + esc(detalheCliente(c)) + '</small></li>';
     }).join('') + '<li class="sug__nova" aria-disabled="true">Não achou? Continue digitando: é uma cliente nova.</li>';
     lista.hidden = false;
@@ -745,7 +747,7 @@
       .catch(function (e) { corpo.innerHTML = '<div class="aviso aviso--erro">' + esc(msgErro(e)) + '</div>'; });
   }
   function abrirSalao(modo) {
-    modoSalao = modo; editandoProf = null; novoAcesso = false; boasVindas = null; avisoEquipe = '';
+    modoSalao = modo; editandoProf = null; novoAcesso = false; boasVindas = null; avisoEquipe = ''; avisoPrecos = ''; catEditando = catExcluindo = '';
     $('#salao-h').textContent = modo === 'precos' ? 'Serviços e preços' : 'Equipe e acessos';
     $('#salao-dica').textContent = modo === 'precos' ? 'O que você salvar aqui aparece no site na hora.' : 'Quem está ativa na equipe aparece no site para as clientes escolherem.';
     $('#salao-corpo').innerHTML = CFG ? '' : '<p class="dica">Carregando…</p>';
@@ -785,28 +787,71 @@
 
   /* Serviços e preços */
   function opcoesCategorias(atual) { return CFG.categorias.map(function (c) { return '<option' + (c === atual ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join(''); }
+  // Categorias: a Elainy cria, renomeia, muda a ordem e exclui (os serviços nunca ficam sem categoria)
+  var avisoPrecos = '', catEditando = '', catExcluindo = '';
+  function blocoCategorias() {
+    var conta = {};
+    CFG.servicos.forEach(function (s) { conta[s.categoria] = (conta[s.categoria] || 0) + 1; });
+    var n = CFG.categorias.length;
+    return '<div class="bloco cats"><div class="bloco__t">Categorias</div>' +
+      '<p class="dica" style="margin:0 0 8px">São as abas do site (Cabelo, Manicure…), nesta ordem. Use as setas para mudar a ordem.</p>' +
+      CFG.categorias.map(function (c, i) {
+        var q = conta[c] || 0;
+        var linha = '<div class="cat-linha" data-cat="' + esc(c) + '">' +
+          '<span class="cat-setas"><button class="icon icon--mini" type="button" data-cat-sobe' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir ' + esc(c) + '">↑</button>' +
+          '<button class="icon icon--mini" type="button" data-cat-desce' + (i === n - 1 ? ' disabled' : '') + ' aria-label="Descer ' + esc(c) + '">↓</button></span>' +
+          '<span class="cat-nome"><b>' + esc(c) + '</b><small>' + (q ? q + (q === 1 ? ' serviço' : ' serviços') : 'sem serviços ainda (não aparece no site)') + '</small></span>' +
+          '<button class="link" type="button" data-cat-ren>Renomear</button>' +
+          '<button class="link link--bad" type="button" data-cat-del>Excluir</button></div>';
+        if (catEditando === c) {
+          linha += '<div class="cat-caixa"><input class="input" id="cat-ren-nome" maxlength="30" value="' + esc(c) + '" aria-label="Novo nome de ' + esc(c) + '">' +
+            '<button class="btn btn--sm" type="button" data-cat-ren-ok>Salvar nome</button><button class="link" type="button" data-cat-cancela>Cancelar</button></div>';
+        }
+        if (catExcluindo === c) {
+          var outras = CFG.categorias.filter(function (x) { return x !== c; });
+          linha += '<div class="cat-caixa cat-caixa--bad">' + (q
+            ? '<span>Os ' + q + (q === 1 ? ' serviço' : ' serviços') + ' de "' + esc(c) + '" vão para:</span><select class="input" id="cat-mover">' + outras.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select>'
+            : '<span>Excluir a categoria "' + esc(c) + '"?</span>') +
+            '<button class="btn btn--sm btn--danger" type="button" data-cat-del-ok>Excluir</button><button class="link" type="button" data-cat-cancela>Cancelar</button></div>';
+        }
+        return linha;
+      }).join('') +
+      '<div class="cat-caixa cat-nova"><input class="input" id="cat-nova" maxlength="30" placeholder="Nome da nova categoria"><button class="btn btn--ghost btn--sm" type="button" id="cat-nova-ok">+ Criar categoria</button></div>' +
+      '</div>';
+  }
+  function categoriaAcao(d, msgPadrao) {
+    return rodar('salvarCategorias', d).then(function (r) {
+      catEditando = catExcluindo = '';
+      avisoPrecos = (r && r.mensagem) || msgPadrao || '';
+      return depoisDeSalvar(avisoPrecos || 'Categorias salvas');
+    }).catch(function (er) { toast(msgErro(er), true); carregarSalao(); });
+  }
   function renderServicos() {
     var grupos = {};
     CFG.servicos.forEach(function (s) { (grupos[s.categoria] = grupos[s.categoria] || []).push(s); });
-    var linhas = Object.keys(grupos).map(function (c) {
-      return '<div class="cat-t">' + esc(c) + '</div>' + grupos[c].map(function (s) {
+    var ordem = CFG.categorias.concat(Object.keys(grupos).filter(function (c) { return CFG.categorias.indexOf(c) < 0; }));
+    var linhas = ordem.map(function (c) {
+      return '<div class="cat-t">' + esc(c) + '</div>' + (grupos[c] || []).map(function (s) {
         return '<div class="srv' + (s.ativo ? '' : ' srv--off') + '" data-linha="' + s.linha + '">' +
           '<div class="srv__nome"><b>' + esc(s.nome) + '</b>' + (s.ativo ? '' : '<small>Escondido do site</small>') + (s.descricao ? '<small>' + esc(s.descricao) + '</small>' : '') + '</div>' +
+          '<label class="f">Categoria<select class="input" data-k="categoria">' + opcoesCategorias(s.categoria) + '</select></label>' +
           '<label class="f">Preço (R$)<input class="input" data-k="preco" type="number" inputmode="decimal" min="0" step="0.01" value="' + (s.preco == null ? '' : s.preco) + '" placeholder="sob consulta"></label>' +
           '<label class="f">Tempo (min)<input class="input" data-k="duracao" type="number" inputmode="numeric" min="5" max="600" step="5" value="' + s.duracao + '"></label>' +
           '<label class="check" title="No site aparece &quot;a partir de&quot; antes do preço"><input type="checkbox" data-k="aPartirDe"' + (s.aPartirDe ? ' checked' : '') + '> A partir de</label>' +
           '<label class="check" title="Desmarque para esconder do site"><input type="checkbox" data-k="ativo"' + (s.ativo ? ' checked' : '') + '> No site</label>' +
           '<button class="btn btn--sm" type="button" data-salvar-srv disabled>Salvar</button>' +
         '</div>';
-      }).join('');
+      }).join('') + (grupos[c] ? '' : '<p class="dica" style="margin:4px 0 8px">Nenhum serviço nesta categoria ainda. Use <b>+ Novo serviço</b> ou mude a categoria de um serviço.</p>');
     }).join('');
     $('#salao-corpo').innerHTML =
-      '<div class="topo-lista"><p>Mude o preço ou o tempo e toque em <b>Salvar</b> na mesma linha. Desmarque <b>No site</b> para esconder um serviço.</p>' +
+      (avisoPrecos ? '<div class="aviso aviso--ok">✅ ' + esc(avisoPrecos) + '</div>' : '') +
+      blocoCategorias() +
+      '<div class="topo-lista"><p>Mude o preço, o tempo ou a categoria e toque em <b>Salvar</b> na mesma linha. Desmarque <b>No site</b> para esconder um serviço.</p>' +
         '<button class="btn btn--ghost btn--sm" type="button" id="srv-novo">+ Novo serviço</button></div>' +
       '<div class="novo-srv" id="srv-form" hidden>' +
         '<div class="linha2"><label class="f">Nome do serviço<input class="input" id="ns-nome" maxlength="60"></label>' +
-          '<label class="f">Categoria<select class="input" id="ns-cat">' + opcoesCategorias('Cabelo') + '</select></label></div>' +
-        '<label class="f">Descrição curta <small>(opcional, aparece no site)</small><input class="input" id="ns-desc" maxlength="140"></label>' +
+          '<label class="f">Categoria<select class="input" id="ns-cat">' + opcoesCategorias(CFG.categorias[0]) + '</select></label></div>' +
+        '<label class="f"><span>Descrição curta <small>(opcional, aparece no site)</small></span><input class="input" id="ns-desc" maxlength="140"></label>' +
         '<div class="linha2"><label class="f">Preço (R$)<input class="input" id="ns-preco" type="number" inputmode="decimal" min="0" step="0.01" placeholder="vazio = sob consulta"></label>' +
           '<label class="f">Tempo (min)<input class="input" id="ns-dur" type="number" inputmode="numeric" min="5" max="600" step="5" value="60"></label></div>' +
         '<label class="check"><input type="checkbox" id="ns-apartir"> Preço "a partir de" (pode variar com o cabelo)</label>' +
@@ -817,8 +862,37 @@
   $('#salao-corpo').addEventListener('input', function (e) {
     var linha = e.target.closest('.srv'); if (linha) $('[data-salvar-srv]', linha).disabled = false;
   });
+  $('#salao-corpo').addEventListener('change', function (e) {
+    var linha = e.target.closest('.srv'); if (linha) $('[data-salvar-srv]', linha).disabled = false;
+  });
+  $('#salao-corpo').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    if (e.target.id === 'cat-nova') { e.preventDefault(); $('#cat-nova-ok').click(); }
+    if (e.target.id === 'cat-ren-nome') { e.preventDefault(); $('[data-cat-ren-ok]').click(); }
+  });
   $('#salao-corpo').addEventListener('click', function (e) {
     var t = e.target;
+    /* Categorias */
+    var catLinha = t.closest('[data-cat]'), catNome = catLinha ? catLinha.dataset.cat : '';
+    if (t.closest('[data-cat-sobe]') || t.closest('[data-cat-desce]')) {
+      var lista = CFG.categorias.slice(), i = lista.indexOf(catNome), j = i + (t.closest('[data-cat-sobe]') ? -1 : 1);
+      lista.splice(j, 0, lista.splice(i, 1)[0]);
+      CFG.categorias = lista; avisoPrecos = ''; renderServicos(); // muda na tela na hora
+      categoriaAcao({ acao: 'ordem', lista: lista }, 'Ordem das categorias salva. O site já mostra nessa ordem.');
+      return;
+    }
+    if (t.closest('[data-cat-ren]')) { catEditando = catNome; catExcluindo = ''; avisoPrecos = ''; renderServicos(); $('#cat-ren-nome').select(); return; }
+    if (t.closest('[data-cat-del]')) { catExcluindo = catNome; catEditando = ''; avisoPrecos = ''; renderServicos(); return; }
+    if (t.closest('[data-cat-cancela]')) { catEditando = catExcluindo = ''; renderServicos(); return; }
+    if (t.closest('[data-cat-ren-ok]')) { t.disabled = true; categoriaAcao({ acao: 'renomear', de: catEditando, para: $('#cat-ren-nome').value }); return; }
+    if (t.closest('[data-cat-del-ok]')) { t.disabled = true; categoriaAcao({ acao: 'excluir', nome: catExcluindo, moverPara: $('#cat-mover') ? $('#cat-mover').value : '' }); return; }
+    if (t.closest('#cat-nova-ok')) {
+      var nomeCat = $('#cat-nova').value.trim();
+      if (!nomeCat) { $('#cat-nova').focus(); return toast('Escreva o nome da nova categoria.', true); }
+      t.disabled = true; categoriaAcao({ acao: 'criar', nome: nomeCat });
+      return;
+    }
+
     if (t.closest('#srv-novo')) { $('#srv-form').hidden = false; $('#ns-nome').focus(); return; }
     if (t.closest('#ns-cancelar')) { $('#srv-form').hidden = true; return; }
     if (t.closest('#ns-salvar')) {
@@ -833,7 +907,7 @@
       var linha = salvarSrv.closest('.srv'), s = CFG.servicos.filter(function (x) { return x.linha === Number(linha.dataset.linha); })[0];
       var campo = function (k) { var i = $('[data-k="' + k + '"]', linha); return i.type === 'checkbox' ? i.checked : i.value; };
       salvarSrv.disabled = true; salvarSrv.textContent = 'Salvando…';
-      rodar('salvarServico', { linha: s.linha, nome: s.nome, categoria: s.categoria, preco: campo('preco'), duracao: campo('duracao'), aPartirDe: campo('aPartirDe'), ativo: campo('ativo') })
+      rodar('salvarServico', { linha: s.linha, nome: s.nome, categoria: campo('categoria'), preco: campo('preco'), duracao: campo('duracao'), aPartirDe: campo('aPartirDe'), ativo: campo('ativo') })
         .then(function () { return depoisDeSalvar(s.nome + ': salvo. O site já mostra o valor novo.'); })
         .catch(function (er) { salvarSrv.disabled = false; salvarSrv.textContent = 'Salvar'; toast(msgErro(er), true); });
       return;

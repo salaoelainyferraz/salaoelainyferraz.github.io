@@ -159,7 +159,12 @@
     const b = e.target.closest('.tab');
     if (!b) return;
     categoriaAtiva = b.dataset.cat;
-    renderTabs();
+    // Só troca a marcação (sem redesenhar) para a faixa não voltar ao começo no celular
+    $('#tabs').querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t === b)));
+    // No celular a faixa rola de lado: traz a categoria tocada inteira para a tela
+    const faixa = $('#tabs');
+    const fb = faixa.getBoundingClientRect(), bb = b.getBoundingClientRect();
+    if (bb.left < fb.left || bb.right > fb.right) faixa.scrollBy({ left: bb.left - fb.left - (fb.width - bb.width) / 2, behavior: 'smooth' });
     renderLista();
   });
 

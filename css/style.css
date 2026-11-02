@@ -166,14 +166,29 @@ p { margin: 0; }
 @media (max-width: 480px) { .hero__hours { border-radius: var(--radius); } }
 
 /* ---------- Serviços: lista de preços compacta ---------- */
-.tabs { display: flex; justify-content: center; gap: 6px; margin-bottom: 22px; }
+/* Categorias: no celular viram uma faixa que rola de lado (de ponta a ponta da tela);
+   a partir de 760px quebram em linhas centralizadas. Os nomes nunca quebram dentro do botão. */
+.tabs {
+  display: flex; gap: 8px; margin: 0 calc(var(--gutter) * -1) 16px; padding: 6px var(--gutter) 8px;
+  overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: var(--gutter);
+  scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+}
+.tabs::-webkit-scrollbar { display: none; }
+/* margens automáticas centralizam quando sobra espaço e somem quando a faixa rola */
+.tab:first-child { margin-left: auto; }
+.tab:last-child { margin-right: auto; }
 .tab {
-  min-height: 44px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+  flex: none; white-space: nowrap; scroll-snap-align: start;
+  min-height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
   font-size: 0.95rem; letter-spacing: 0.04em; cursor: pointer; transition: all .2s; color: var(--ink-2);
+}
+@media (min-width: 760px) {
+  .tabs { flex-wrap: wrap; justify-content: center; overflow: visible; margin-inline: 0; padding-inline: 0; }
+  .tab:first-child, .tab:last-child { margin-inline: 0; }
 }
 .tab:hover { border-color: var(--brand); color: var(--brand); }
 .tab[aria-selected='true'] { background: var(--ink); border-color: var(--ink); color: #fff; }
-.price-list { max-width: 760px; margin: 0 auto; list-style: none; padding: 0; }
+.price-list { max-width: 760px; margin: 0 auto; list-style: none; padding: 0; overflow-wrap: anywhere; }
 .price-item {
   display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 4px 16px;
   padding: 14px 4px; border-bottom: 1px solid var(--line);
@@ -419,7 +434,8 @@ body.sem-rolagem { overflow: hidden; }
 }
 .opt input[type='radio'] ~ .opt__check { border-radius: 50%; }
 .opt__check svg { width: 15px; height: 15px; }
-.opt__body { flex: 1; min-width: 0; }
+/* overflow-wrap: nomes longos sem espaço (ex.: "Hidratação/Reconstrução/Nutrição") quebram em vez de empurrar o preço para fora da tela */
+.opt__body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .opt__name { font-weight: 500; display: block; }
 .opt__desc { display: block; font-size: 0.87rem; color: var(--muted); margin-top: 1px; }
 .opt__aside { text-align: right; flex: none; }

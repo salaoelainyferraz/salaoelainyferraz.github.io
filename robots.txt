@@ -3,3 +3,5 @@ Allow: /
 Disallow: /painel/
 Disallow: /planilha/
 Disallow: /home/
+
+Sitemap: https://elainyferraz.com.br/sitemap.xml

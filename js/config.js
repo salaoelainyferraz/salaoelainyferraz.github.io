@@ -20,7 +20,7 @@ window.SALAO = {
       linkAvaliacao: '',
       linkMapa: 'https://www.google.com/maps/place/Sal%C3%A3o+de+Beleza+Elainy+Ferraz/@-14.8612509,-40.8343632,17z/data=!3m1!4b1!4m6!3m5!1s0x7463baacccc0283:0xfa2bc5099214b313!8m2!3d-14.8612554!4d-40.8321303!16s%2Fg%2F1ptwvl287',
       antecedenciaHoras: 2,
-      diasAFrente: 30,
+      diasAFrente: 90,
       passoMin: 30,
       prazoAlteracaoHoras: 5,
     },

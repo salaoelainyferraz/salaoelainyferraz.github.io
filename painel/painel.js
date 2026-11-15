@@ -427,10 +427,15 @@
     return D.usuario && D.usuario.perfil !== 'Profissional' && A_FAZER.indexOf(a.status) >= 0 && D.profissionais.length > 1 &&
       a.roteiro.every(function (s) { return s.profId; });
   }
+  /** A profissional faz esse serviço? (categoria dela ou "Todas", e o serviço não está no "não faz" dela) */
+  function faz(p, s) {
+    if ((p.naoFaz || []).indexOf(s.id) >= 0) return false;
+    return p.categorias.indexOf('*') >= 0 || p.categorias.indexOf('Todas') >= 0 || p.categorias.indexOf(s.categoria) >= 0;
+  }
   function quemFaz(passo) {
     var s = D.servicos.filter(function (x) { return x.id === passo.servicoId || x.nome === passo.servico; })[0];
     return D.profissionais.filter(function (p) {
-      return p.id !== passo.profId && (!s || p.categorias.indexOf('*') >= 0 || p.categorias.indexOf(s.categoria) >= 0);
+      return p.id !== passo.profId && (!s || faz(p, s));
     });
   }
   function abrirTroca(a, i) {
@@ -533,7 +538,7 @@
   function profsQueFazem(ids) {
     var servs = D.servicos.filter(function (s) { return ids.indexOf(s.id) >= 0; });
     return D.profissionais.filter(function (p) {
-      return p.categorias.indexOf('*') >= 0 || servs.every(function (s) { return p.categorias.indexOf(s.categoria) >= 0; });
+      return servs.every(function (s) { return faz(p, s); });
     });
   }
   function atualizarProfsEncaixe() {
@@ -1014,9 +1019,9 @@
     }
 
     /* Equipe */
-    if (t.closest('#prof-nova')) { editandoProf = { nova: true, passo: 1, escala: [] }; avisoEquipe = ''; renderFormProf(); return; }
+    if (t.closest('#prof-nova')) { editandoProf = { nova: true, passo: 1, escala: [] }; naoFazEd = []; avisoEquipe = ''; renderFormProf(); return; }
     var ed = t.closest('[data-editar-prof]');
-    if (ed) { editandoProf = CFG.profissionais.filter(function (p) { return p.id === ed.dataset.editarProf; })[0]; avisoEquipe = ''; renderFormProf(); return; }
+    if (ed) { editandoProf = CFG.profissionais.filter(function (p) { return p.id === ed.dataset.editarProf; })[0]; naoFazEd = (editandoProf.naoFaz || []).slice(); avisoEquipe = ''; renderFormProf(); return; }
     if (t.closest('[data-voltar-equipe]')) { editandoProf = null; novoAcesso = false; boasVindas = null; renderEquipe(); return; }
     var cat = t.closest('#pf-cats [data-cat]');
     if (cat) {
@@ -1025,6 +1030,15 @@
         if (b === cat) b.setAttribute('aria-pressed', marcar);
         else if (marcar && (todas || b.dataset.cat === 'Todas')) b.setAttribute('aria-pressed', 'false');
       });
+      renderServsProf();
+      return;
+    }
+    var faz1 = t.closest('#pf-servs [data-pf-serv]');
+    if (faz1) {
+      var sid = faz1.dataset.pfServ, k = naoFazEd.indexOf(sid);
+      if (faz1.checked && k >= 0) naoFazEd.splice(k, 1);
+      if (!faz1.checked && k < 0) naoFazEd.push(sid);
+      resumoServsCat(faz1.closest('details'));
       return;
     }
     var modo = t.closest('#pf-modo [data-modo]');
@@ -1122,6 +1136,7 @@
       return '<div class="pessoa"><span class="dot" style="background:' + (p.ativo ? corProf(p.id) : 'var(--line-strong)') + '"></span><div>' +
         '<b style="font-weight:500">' + esc(p.nome) + '</b>' + (p.ativo ? '' : ' <span class="tag">desativada</span>') +
         '<small>Faz: ' + esc(p.categorias.join(', ')) + '</small>' +
+        ((p.naoFaz || []).length ? '<small>Não faz: ' + esc(CFG.servicos.filter(function (s) { return p.naoFaz.indexOf(s.id) >= 0; }).map(function (s) { return s.nome; }).join(', ')) + '</small>' : '') +
         '<small>Dias: ' + esc(resumoEscala(p)) + '</small>' +
         '<small>Painel: ' + (p.dona ? 'usuário <b>' + esc(p.usuario) + '</b> · acesso total' : p.usuario ? 'usuário <b>' + esc(p.usuario) + '</b> · vê só a própria agenda' : 'sem acesso') + '</small>' +
         '<small>Agenda no celular: ' + (p.gmail ? esc(p.gmail) : 'não ligada') + '</small>' +
@@ -1162,7 +1177,8 @@
         (nova ? '<label class="f">Nome <small>(como vai aparecer no site)</small><input class="input" id="pf-nome" maxlength="40" autocomplete="off"></label>' : '') +
         '<div><div class="rot">O que ela faz</div><div class="opcoes" id="pf-cats">' +
           ['Todas'].concat(CFG.categorias).map(function (c) { return '<button type="button" data-cat="' + esc(c) + '" aria-pressed="' + (cats.indexOf(c) >= 0) + '">' + esc(c) + '</button>'; }).join('') +
-        '</div><p class="dica">O site só oferece cada serviço com quem faz aquela categoria.</p></div>') +
+        '</div><p class="dica">O site só oferece cada serviço com quem faz aquela categoria.</p></div>' +
+        '<div id="pf-servs"></div>') +
       secao(2,
         '<div><div class="rot">Dias e horários</div><div class="opcoes" id="pf-modo">' +
           '<button type="button" data-modo="salao" aria-pressed="' + !temEscala + '">Todo o horário do salão</button>' +
@@ -1195,7 +1211,36 @@
           : (p.dona ? '' : '<button class="link link--bad" type="button" id="pf-excluir" style="margin-right:auto">Excluir da equipe</button>') + '<button class="btn" type="button" id="pf-salvar">Salvar alterações</button>') +
       '</div>';
     $('#salao-corpo').innerHTML = html;
+    renderServsProf();
     if (nova) irPasso(p.passo || 1, true);
+  }
+  /* Serviço por serviço: dentro das categorias marcadas, desmarca o que ela não faz (ex.: faz Manicure e pedicure, menos Pedicure) */
+  var naoFazEd = [];
+  function servsDaCat(c) { return CFG.servicos.filter(function (s) { return s.ativo && s.categoria === c; }); }
+  function renderServsProf() {
+    var box = $('#pf-servs'); if (!box) return;
+    var cats = $$('#pf-cats [aria-pressed=true]').map(function (b) { return b.dataset.cat; });
+    var lista = cats.indexOf('Todas') >= 0 ? CFG.categorias.slice() : cats;
+    lista = lista.filter(function (c) { return servsDaCat(c).length; });
+    var abertas = $$('details[data-servs-cat][open]', box).map(function (d) { return d.dataset.servsCat; });
+    box.innerHTML = !lista.length ? '' :
+      '<div class="rot">Serviço por serviço</div>' +
+      '<p class="dica" style="margin:0 0 8px">Toque na categoria e desmarque o que ela <b>não</b> faz. Esses serviços não aparecem com ela no site.</p>' +
+      lista.map(function (c) {
+        var servs = servsDaCat(c);
+        return '<details class="pf-cat-servs" data-servs-cat="' + esc(c) + '"' + (abertas.indexOf(c) >= 0 ? ' open' : '') + '><summary><span>' + esc(c) + '</span><small data-resumo></small></summary><div class="servs">' +
+          servs.map(function (s) {
+            return '<label><input type="checkbox" data-pf-serv="' + esc(s.id) + '"' + (naoFazEd.indexOf(s.id) < 0 ? ' checked' : '') + '> ' + esc(s.nome) + '</label>';
+          }).join('') + '</div></details>';
+      }).join('');
+    $$('details[data-servs-cat]', box).forEach(resumoServsCat);
+  }
+  function resumoServsCat(det) {
+    if (!det) return;
+    var cx = $$('[data-pf-serv]', det), n = cx.filter(function (c) { return c.checked; }).length;
+    var r = $('[data-resumo]', det);
+    r.textContent = n === cx.length ? 'faz todos (' + n + ')' : n ? 'faz ' + n + ' de ' + cx.length : 'não faz nenhum';
+    r.className = n === cx.length ? '' : 'menos';
   }
   function irPasso(n, sem) {
     var p = editandoProf;
@@ -1221,6 +1266,7 @@
     return {
       linha: nova ? null : p.linha, id: nova ? '' : p.id, nome: nova ? $('#pf-nome').value.trim() : p.nome,
       todas: cats.indexOf('Todas') >= 0, categorias: cats.filter(function (c) { return c !== 'Todas'; }),
+      naoFaz: $$('#pf-servs [data-pf-serv]').filter(function (c) { return !c.checked; }).map(function (c) { return c.dataset.pfServ; }),
       escala: porEscala ? $$('#pf-escala [data-dia]:checked').map(function (c) {
         var linha = c.closest('.escala > div');
         return { dia: Number(c.dataset.dia), ini: $('[data-ini]', linha).value, fim: $('[data-fim]', linha).value };
@@ -1234,6 +1280,7 @@
     var d = lerFormProf(), nova = !!editandoProf.nova;
     if (n === 1 && nova && d.nome.length < 2) return 'Escreva o nome dela.';
     if (n === 1 && !d.todas && !d.categorias.length) return 'Toque no que ela faz (pode marcar mais de um).';
+    if (n === 1 && $$('#pf-servs [data-pf-serv]').length && !$$('#pf-servs [data-pf-serv]:checked').length) return 'Do jeito que está, ela não faria nenhum serviço. Marque pelo menos um.';
     if (n === 2 && d.escala && !d.escala.length) return 'Marque pelo menos um dia de trabalho (ou escolha "Todo o horário do salão").';
     if (n === 2 && d.escala && d.escala.some(function (e) { return !e.ini || !e.fim || e.fim <= e.ini; })) return 'Confira os horários: o fim precisa ser depois do início.';
     if (n === 3 && nova && (!d.usuario || d.senha.length < 6)) return 'Crie o usuário e a senha dela (mínimo 6 letras ou números). São obrigatórios para ela entrar no painel.';

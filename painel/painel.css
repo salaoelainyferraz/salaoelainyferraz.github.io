@@ -408,3 +408,10 @@ div.f small { font-weight: 400; color: var(--muted); }
 .hor--fechado .hor__campos { opacity: 0.45; }
 .hor__pe { padding: 14px 0 4px; display: flex; justify-content: flex-end; }
 @media (max-width: 600px) { .hor__campos { grid-template-columns: 1fr 1fr; } }
+
+/* ===== Serviço por serviço no cadastro da profissional (15/11/2026) ===== */
+.pf-cat-servs { border: 1px solid var(--line); border-radius: 10px; background: #fff; margin-top: 8px; }
+.pf-cat-servs summary { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 0 14px; font-weight: 500; }
+.pf-cat-servs summary small { font-weight: 400; color: var(--muted); font-size: 0.84rem; }
+.pf-cat-servs summary small.menos { color: var(--brand); font-weight: 500; }
+.pf-cat-servs .servs { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; max-height: 260px; }

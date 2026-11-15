@@ -51,7 +51,7 @@
     { id: 'revisao', nome: 'Confirmação' },
   ];
 
-  const atende = (p, s) => p.categorias.includes('*') || p.categorias.includes(s.categoria);
+  const atende = (p, s) => !(p.naoFaz || []).includes(s.id) && (p.categorias.includes('*') || p.categorias.includes(s.categoria));
   const quemFaz = (s) => C.profissionais.filter((p) => atende(p, s));
   /** O passo "Com quem?" só aparece se algum serviço escolhido tiver mais de uma profissional. */
   const temEscolha = () => servicosEscolhidos().some((s) => quemFaz(s).length > 1);

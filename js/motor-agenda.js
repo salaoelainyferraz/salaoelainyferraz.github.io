@@ -21,7 +21,9 @@ var MotorAgenda = (function () {
     return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
   }
 
+  /** Faz a categoria do serviço (ou "Todas") e o serviço não está na lista "não faz" dela. */
   function atende(prof, servico) {
+    if (prof.naoFaz && prof.naoFaz.indexOf(servico.id) >= 0) return false;
     return prof.categorias.indexOf('*') >= 0 || prof.categorias.indexOf(servico.categoria) >= 0;
   }
 
@@ -62,7 +64,7 @@ var MotorAgenda = (function () {
    * ctx = {
    *   servicos:      [{id, nome, categoria, duracao}] na ordem escolhida pela cliente
    *   prefs:         {servicoId: profId | 'qualquer'}  (opcional)
-   *   profissionais: [{id, nome, categorias:['Cabelo'] ou ['*']}]
+   *   profissionais: [{id, nome, categorias:['Cabelo'] ou ['*'], naoFaz:[servicoId] (opcional)}]
    *   horarioSalao:  {abre:'08:00', fecha:'18:00', pausaIni, pausaFim} ou null (fechado)
    *   escalas:       {profId: [[iniMin, fimMin], ...]}  só para quem tem escala (opcional)
    *   ocupados:      {profId: [[iniMin, fimMin], ...]}  eventos já na agenda

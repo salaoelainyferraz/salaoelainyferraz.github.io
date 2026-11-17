@@ -508,6 +508,10 @@ body.sem-rolagem { overflow: hidden; }
 .roteiro__hora { font-variant-numeric: tabular-nums; font-weight: 500; color: var(--brand); width: 48px; flex: none; }
 .roteiro__item b { font-weight: 500; }
 .roteiro__item--fim { color: var(--muted); }
+.roteiro__whats { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding-top: 10px; border-top: 1px dashed #e6d5b0; font-size: 0.9rem; color: var(--ink-2); }
+.roteiro__whats svg { width: 18px; height: 18px; flex: none; color: var(--wa); margin-top: 2px; }
+.success__check.success__check--wa { background: var(--wa); box-shadow: 0 8px 24px rgb(26 125 67 / 0.3); }
+.success__check.success__check--wa svg { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
 
 /* Formulário */
 .field { display: grid; gap: 6px; margin-top: 18px; }

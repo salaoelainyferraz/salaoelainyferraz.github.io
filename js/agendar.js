@@ -59,6 +59,11 @@
     if (st.reagendar) return [{ id: 'horario', nome: 'Novo dia e horário' }, { id: 'revisao', nome: 'Confirmação' }];
     return PASSOS.filter((p) => p.id !== 'profissional' || (st.servicos.length ? temEscolha() : C.profissionais.length > 1));
   };
+  /* Sem dia fixo (Silvia, Rebeca...): a cliente escolhe dia e horário, mas o pedido vai pelo WhatsApp e o salão confirma. */
+  const profPorWhats = (id) => C.profissionais.some((p) => p.id === id && p.porWhats);
+  const planoPorWhats = (plano) => !!plano && plano.some((x) => profPorWhats(x.profId));
+  const nomesPorWhats = (plano) => [...new Set((plano || []).filter((x) => profPorWhats(x.profId)).map((x) => x.prof))];
+  const juntarNomes = (l) => (l.length > 1 ? l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1] : l[0] || '');
   const prazoH = () => (C && C.cfg && C.cfg.prazoAlteracaoHoras) || 5;
   const linkGerenciar = (token) => location.origin + location.pathname + '?gerenciar=' + token;
 
@@ -101,6 +106,7 @@
     const h = location.hash.slice(1) || 'servicos';
     const ativos = passosAtivos().map((p) => p.id);
     if (h === 'sucesso') return st.ultimo ? 'sucesso' : 'servicos';
+    if (h === 'pedido') return st.pedido ? 'pedido' : 'servicos';
     // Não deixa pular etapas (ex.: alguém abriu direto o link #revisao).
     const req = {
       servicos: true,
@@ -124,7 +130,7 @@
   $('#btn-voltar').addEventListener('click', () => {
     const p = passoAtual();
     if (st.reagendar && p === 'horario') location.href = '?gerenciar=' + st.reagendar.token;
-    else if (modoCancelar || p === 'servicos' || p === 'sucesso') location.href = 'index.html';
+    else if (modoCancelar || p === 'servicos' || p === 'sucesso' || p === 'pedido') location.href = 'index.html';
     else history.back();
   });
   window.addEventListener('popstate', render);
@@ -134,7 +140,7 @@
     const ativos = passosAtivos();
     const i = ativos.findIndex((p) => p.id === passo);
     if (i < 0) {
-      $('#passo-label').textContent = passo === 'sucesso' ? 'Tudo certo!' : 'Seu agendamento';
+      $('#passo-label').textContent = passo === 'sucesso' ? 'Tudo certo!' : passo === 'pedido' ? 'Falta só enviar no WhatsApp' : 'Seu agendamento';
       $('#progress').style.width = '100%';
       return;
     }
@@ -150,6 +156,7 @@
       return;
     }
     bar.hidden = false;
+    barBtn.classList.remove('btn--wa');
     barInfo.innerHTML = info || '';
     barBtn.innerHTML = label;
     barBtn.disabled = !enabled;
@@ -162,7 +169,7 @@
     const passo = passoAtual();
     if (location.hash.slice(1) !== passo) history.replaceState(null, '', '#' + passo);
     header(passo);
-    ({ servicos: viewServicos, profissional: viewProfissional, horario: viewHorario, dados: viewDados, revisao: viewRevisao, sucesso: viewSucesso })[passo]();
+    ({ servicos: viewServicos, profissional: viewProfissional, horario: viewHorario, dados: viewDados, revisao: viewRevisao, sucesso: viewSucesso, pedido: viewPedido })[passo]();
     window.scrollTo({ top: 0 });
     // Leva o foco para o título do passo (leitores de tela anunciam a mudança).
     const h1 = $('h1', app);
@@ -234,7 +241,7 @@
       const quem = quemFaz(s);
       if (quem.length <= 1) {
         return `<div class="bk-group"><div class="bk-group__title">${esc(s.nome)}</div>
-          <div class="opt opt--static">${quem[0] ? avatar(quem[0]) : ''}<span class="opt__body"><span class="opt__name">${esc(quem[0]?.nome || '—')}</span><span class="opt__desc">Profissional deste serviço</span></span></div></div>`;
+          <div class="opt opt--static">${quem[0] ? avatar(quem[0]) : ''}<span class="opt__body"><span class="opt__name">${esc(quem[0]?.nome || '—')}</span><span class="opt__desc">${quem[0]?.porWhats ? 'Sem dia fixo no salão: o horário é confirmado pelo WhatsApp' : 'Profissional deste serviço'}</span></span></div></div>`;
       }
       const atual = st.prefs[s.id] || 'qualquer';
       const opcao = (id, nome, av, desc) => `
@@ -248,7 +255,7 @@
         <div class="bk-group__title">${esc(s.nome)}</div>
         <div class="opt-list">
           ${opcao('qualquer', 'Sem preferência', `<span class="avatar avatar--any">${I.users}</span>`, 'Mostra mais horários livres')}
-          ${quem.map((p) => opcao(p.id, p.nome, avatar(p), '')).join('')}
+          ${quem.map((p) => opcao(p.id, p.nome, avatar(p), p.porWhats ? 'Sem dia fixo: horário confirmado pelo WhatsApp' : '')).join('')}
         </div></div>`;
     });
 
@@ -274,6 +281,7 @@
       <section class="bk-step">
         <h1 tabindex="-1">Quando fica bom?</h1>
         <p class="bk-sub">${esc(servicosEscolhidos().map((s) => s.nome).join(' + '))} · ${fmt.duracao(duracaoTotal())}</p>
+        ${notaSemDiaFixo()}
         ${st.erroHorario ? `<div class="alert alert--error" role="alert">${I.alert}<span>${esc(st.erroHorario)}</span></div>` : ''}
         <div class="bk-group">
           <div class="bk-group__title" id="dias-label">Escolha o dia</div>
@@ -337,6 +345,24 @@
     const sel = days.querySelector('[aria-pressed=true]');
     if (sel) days.scrollLeft = Math.max(0, sel.offsetLeft - days.offsetLeft - 8);
     carregarSlots();
+  }
+
+  /** Profissionais sem dia fixo que com certeza vão atender (o serviço só tem elas, ou a cliente escolheu uma delas). */
+  function semDiaFixoCerto() {
+    const nomes = [];
+    servicosEscolhidos().forEach((s) => {
+      const pref = st.prefs[s.id];
+      const cands = quemFaz(s).filter((p) => !pref || pref === 'qualquer' || pref === p.id);
+      if (cands.length && cands.every((p) => p.porWhats)) cands.forEach((p) => { if (!nomes.includes(p.nome)) nomes.push(p.nome); });
+    });
+    return nomes;
+  }
+
+  function notaSemDiaFixo() {
+    if (st.reagendar) return '';
+    const nomes = semDiaFixoCerto();
+    if (!nomes.length) return '';
+    return `<div class="alert alert--info" role="note">${I.wa}<span><b>${esc(juntarNomes(nomes))}</b> não ${nomes.length > 1 ? 'têm' : 'tem'} dia fixo no salão. Escolha o dia e o horário que ficam bons para você: no final, o pedido vai pelo <b>WhatsApp</b> e o salão confirma com você.</span></div>`;
   }
 
   async function carregarSlots() {
@@ -437,6 +463,7 @@ Meu nome: `;
       <div class="roteiro__title">Seu roteiro</div>
       ${plano.map((p) => `<div class="roteiro__item"><span class="roteiro__hora">${p.ini}</span><span><b>${esc(p.servico)}</b> com ${esc(p.prof)}</span></div>`).join('')}
       <div class="roteiro__item roteiro__item--fim"><span class="roteiro__hora">${plano[plano.length - 1].fim}</span><span>Fim, tudo pronto ✨</span></div>
+      ${planoPorWhats(plano) ? `<p class="roteiro__whats">${I.wa}<span>Com ${esc(juntarNomes(nomesPorWhats(plano)))} o horário é confirmado pelo WhatsApp do salão.</span></p>` : ''}
     </div>`;
   }
 
@@ -553,6 +580,8 @@ Meu nome: `;
 
   function viewRevisao(erro) {
     const r = st.reagendar;
+    const plano = planoAtual();
+    if (!r && planoPorWhats(plano)) return viewRevisaoWhats(plano);
     app.innerHTML = `
       <section class="bk-step">
         <h1 tabindex="-1">${r ? 'Confirma o novo horário?' : 'Confere se está tudo certo'}</h1>
@@ -563,6 +592,62 @@ Meu nome: `;
       </section>`;
     app.querySelectorAll('[data-ir]').forEach((b) => b.addEventListener('click', () => ir(b.dataset.ir)));
     setBar(`<strong>${dataCurta(st.date)} · ${esc(st.hora)}</strong><span>${precoTotalTxt()}</span>`, r ? 'Confirmar novo horário' : 'Confirmar', true, confirmar);
+  }
+
+  /* ---------- Sem dia fixo: em vez de marcar, monta o pedido e abre o WhatsApp do salão ---------- */
+  function msgPedido(plano) {
+    const d = st.dados;
+    const servs = plano.length === 1
+      ? `💇 Serviço: ${plano[0].servico}`
+      : '💇 Serviços:\n' + plano.map((p) => `• ${p.ini} ${p.servico} (com ${p.prof})`).join('\n');
+    return `Olá! Vim pelo site e gostaria de *agendar* com ${juntarNomes(nomesPorWhats(plano))}:
+
+📅 Dia: ${fmt.extenso(st.date)}
+🕘 Horário: das ${plano[0].ini} às ${plano[plano.length - 1].fim}
+${servs}
+
+Nome: ${d.nome}
+WhatsApp: ${fmt.fone(d.whatsapp)}${d.obs ? `\nObservação: ${d.obs}` : ''}
+
+Esse dia e horário dão certo?`;
+  }
+
+  function viewRevisaoWhats(plano) {
+    const nomes = juntarNomes(nomesPorWhats(plano));
+    app.innerHTML = `
+      <section class="bk-step">
+        <h1 tabindex="-1">Confere seu pedido</h1>
+        <p class="bk-sub">Se precisar mudar algo, toque em "Alterar".</p>
+        ${resumoHTML(true, plano, st.date, st.dados, false)}
+        <div class="alert alert--info" role="note">${I.wa}<span><b>${esc(nomes)}</b> não ${nomesPorWhats(plano).length > 1 ? 'têm' : 'tem'} dia fixo no salão, então este horário <b>ainda não está marcado</b>. Toque em "Enviar pedido no WhatsApp": a mensagem já vai pronta, é só enviar. O salão confirma com você por lá.</span></div>
+      </section>`;
+    app.querySelectorAll('[data-ir]').forEach((b) => b.addEventListener('click', () => ir(b.dataset.ir)));
+    setBar(`<strong>${dataCurta(st.date)} · ${esc(st.hora)}</strong><span>${precoTotalTxt()}</span>`, `${I.wa} Enviar pedido no WhatsApp`, true, () => enviarPedido(plano));
+    barBtn.classList.add('btn--wa');
+  }
+
+  function enviarPedido(plano) {
+    const wa = waLink(C.cfg.whatsapp, msgPedido(plano));
+    st.pedido = { plano, date: st.date, wa };
+    window.open(wa, '_blank', 'noopener');
+    ir('pedido', true);
+  }
+
+  function viewPedido() {
+    const p = st.pedido;
+    app.innerHTML = `
+      <section class="bk-step success">
+        <div class="success__check success__check--wa">${I.wa}</div>
+        <h1 tabindex="-1">Agora é só enviar no WhatsApp</h1>
+        <p class="bk-sub">O WhatsApp abriu com o seu pedido pronto. <b>Envie a mensagem</b> e aguarde: o salão confirma o horário com você por lá.</p>
+        <div class="alert alert--info">${I.info}<span>O horário só fica garantido depois que o salão responder confirmando.</span></div>
+        ${resumoHTML(false, p.plano, p.date, st.dados, true)}
+        <div class="success__actions">
+          <a class="btn btn--wa btn--block" href="${p.wa}" target="_blank" rel="noopener">${I.wa} Abrir o WhatsApp de novo</a>
+          <a class="btn btn--ghost btn--block" href="index.html">Voltar para o site</a>
+        </div>
+      </section>`;
+    setBar(null);
   }
 
   async function confirmar() {
@@ -680,7 +765,8 @@ Meu nome: `;
       return;
     }
     const zap = waLink(C.cfg.whatsapp, `Oi! Preciso mudar meu horário de ${b.dataExtenso}, às ${b.hora} (${b.servicos}). Nome: ${b.nome}`);
-    const podeOnline = b.podeAlterar && b.servicoIds && b.servicoIds.length;
+    const comWhats = b.porWhats || planoPorWhats(b.plano);
+    const podeOnline = b.podeAlterar && !comWhats && b.servicoIds && b.servicoIds.length;
 
     app.innerHTML = `
       <section class="bk-step">
@@ -698,7 +784,7 @@ Meu nome: `;
           </div>
           <p class="success__cancel">Não vai poder vir? <button type="button" class="link-inline" id="btn-cancelar">Cancelar horário</button></p>
           ${notaPrazo()}` : `
-          <div class="alert alert--info" role="status">${I.info}<span>${b.podeAlterar ? 'Esse agendamento não pode ser alterado pelo site.' : `Faltam menos de ${b.prazoHoras || prazoH()} horas para o seu horário, então não dá mais para alterar ou cancelar pelo site.`} Fale com a gente pelo WhatsApp que a gente resolve.</span></div>
+          <div class="alert alert--info" role="status">${I.info}<span>${b.podeAlterar ? (comWhats ? 'Esse horário é combinado direto com o salão.' : 'Esse agendamento não pode ser alterado pelo site.') : `Faltam menos de ${b.prazoHoras || prazoH()} horas para o seu horário, então não dá mais para alterar ou cancelar pelo site.`} Fale com a gente pelo WhatsApp que a gente resolve.</span></div>
           <div class="success__actions">
             ${zap ? `<a class="btn btn--wa btn--block" href="${zap}" target="_blank" rel="noopener">${I.wa} Falar com o salão</a>` : ''}
             <a class="btn btn--ghost btn--block" href="index.html">Voltar para o site</a>

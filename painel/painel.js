@@ -1045,6 +1045,7 @@
     if (modo) {
       $$('#pf-modo [data-modo]').forEach(function (b) { b.setAttribute('aria-pressed', b === modo); });
       $('#pf-escala').hidden = modo.dataset.modo !== 'escala';
+      $('#pf-whats-dica').hidden = modo.dataset.modo !== 'whats';
       return;
     }
     var gerar = t.closest('[data-gerar]');
@@ -1120,6 +1121,7 @@
 
   /* Equipe */
   function resumoEscala(p) {
+    if (p.porWhats) return 'sem dia fixo · no site, o pedido vai pelo WhatsApp';
     if (!p.escala.length) return p.escalaComDatas ? 'escala com datas (na planilha)' : 'todo o horário do salão';
     return p.escala.slice().sort(function (a, b) { return ((a.dia + 6) % 7) - ((b.dia + 6) % 7); })
       .map(function (e) { return CURTO[e.dia] + ' ' + e.ini + '–' + e.fim; }).join(' · ');
@@ -1168,6 +1170,7 @@
     var porDia = {};
     (p.escala || []).forEach(function (e) { porDia[e.dia] = e; });
     var temEscala = !nova && p.escala.length > 0;
+    var semFixo = !nova && !!p.porWhats;
     var secao = function (n, html) { return '<section class="passo" data-passo="' + n + '"' + (nova && n !== 1 ? ' hidden' : '') + '>' + html + '</section>'; };
     var html =
       '<div><button class="link" type="button" data-voltar-equipe style="padding-left:0">‹ Voltar para a equipe</button></div>' +
@@ -1181,8 +1184,10 @@
         '<div id="pf-servs"></div>') +
       secao(2,
         '<div><div class="rot">Dias e horários</div><div class="opcoes" id="pf-modo">' +
-          '<button type="button" data-modo="salao" aria-pressed="' + !temEscala + '">Todo o horário do salão</button>' +
-          '<button type="button" data-modo="escala" aria-pressed="' + temEscala + '">Só em alguns dias</button></div>' +
+          '<button type="button" data-modo="salao" aria-pressed="' + (!temEscala && !semFixo) + '">Todo o horário do salão</button>' +
+          '<button type="button" data-modo="escala" aria-pressed="' + (temEscala && !semFixo) + '">Só em alguns dias</button>' +
+          '<button type="button" data-modo="whats" aria-pressed="' + semFixo + '">Sem dia fixo</button></div>' +
+          '<p class="dica" id="pf-whats-dica"' + (semFixo ? '' : ' hidden') + '>No site, a cliente escolhe o serviço, o dia e o horário, mas <b>não marca sozinha</b>: o pedido vai pronto para o WhatsApp do salão. Combinou com ela? Marque pelo <b>Encaixe</b> aqui no painel.</p>' +
           '<div class="escala" id="pf-escala"' + (temEscala ? '' : ' hidden') + '>' + DIAS_SEMANA.map(function (d) {
             var e = porDia[d], on = !!e;
             return '<div><label class="check"><input type="checkbox" data-dia="' + d + '"' + (on ? ' checked' : '') + '> ' + CFG.dias[d] + '</label>' +
@@ -1263,7 +1268,9 @@
     var p = editandoProf, nova = !!p.nova;
     var cats = $$('#pf-cats [aria-pressed=true]').map(function (b) { return b.dataset.cat; });
     var porEscala = $('#pf-modo [data-modo="escala"]').getAttribute('aria-pressed') === 'true';
+    var porWhats = $('#pf-modo [data-modo="whats"]').getAttribute('aria-pressed') === 'true';
     return {
+      porWhats: porWhats,
       linha: nova ? null : p.linha, id: nova ? '' : p.id, nome: nova ? $('#pf-nome').value.trim() : p.nome,
       todas: cats.indexOf('Todas') >= 0, categorias: cats.filter(function (c) { return c !== 'Todas'; }),
       naoFaz: $$('#pf-servs [data-pf-serv]').filter(function (c) { return !c.checked; }).map(function (c) { return c.dataset.pfServ; }),

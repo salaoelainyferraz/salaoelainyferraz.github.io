@@ -155,6 +155,14 @@ textarea.input { min-height: 74px; padding: 10px 12px; resize: vertical; }
 .aviso--erro { background: var(--bad-50); color: var(--bad); }
 .check { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .check input { width: 20px; height: 20px; accent-color: var(--brand); }
+.check small { color: var(--muted); }
+
+/* Novo atendimento com mais de uma profissional (ao mesmo tempo) */
+.divisao { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--brand-50); }
+.divisao__linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; align-items: center; }
+.divisao__linha span { font-size: 0.95rem; overflow-wrap: anywhere; }
+.divisao__linha select { min-height: 40px; }
+.divisao p { margin: 0; color: var(--muted); font-size: 0.85rem; }
 
 /* Ficha */
 #dlg-ficha { width: min(760px, calc(100vw - 24px)); }

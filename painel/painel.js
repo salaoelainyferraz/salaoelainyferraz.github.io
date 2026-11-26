@@ -541,14 +541,64 @@
       return servs.every(function (s) { return faz(p, s); });
     });
   }
+  /*
+   * Uma profissional para tudo (campo "Profissional") ou, quando ninguém faz todos os serviços (ou a recepção marca
+   * "Dividir entre profissionais"), uma profissional por serviço. As profissionais começam AO MESMO TEMPO;
+   * cada uma faz os serviços dela em sequência. Ex.: escova com a Elainy e manicure com a Nanda, às 14:00.
+   */
+  var dividirAuto = false;
   function atualizarProfsEncaixe() {
-    var ids = $$('#enc-servs input:checked').map(function (i) { return i.value; });
+    var ids = servsEscolhidos();
     var atual = $('#enc-prof').value;
     var lista = ids.length ? profsQueFazem(ids) : D.profissionais;
     $('#enc-prof').innerHTML = lista.length
       ? lista.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === atual ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('')
       : '<option value="">Ninguém faz todos esses serviços juntos</option>';
+    // Ninguém faz tudo: divide sozinho. Mais de um serviço: dá para dividir mesmo que uma faça tudo.
+    var ninguem = ids.length > 1 && !lista.length;
+    if (ninguem) { $('#enc-dividir').checked = true; dividirAuto = true; }
+    else if (dividirAuto) { $('#enc-dividir').checked = false; dividirAuto = false; }
+    if (ids.length < 2) $('#enc-dividir').checked = false;
+    $('#enc-dividir-box').hidden = ids.length < 2;
+    $('#enc-dividir').disabled = ninguem;
+    montarDivisao();
   }
+  function dividindo() { return $('#enc-dividir').checked && servsEscolhidos().length > 1; }
+  function montarDivisao() {
+    var div = dividindo();
+    $('#enc-prof-box').hidden = div;
+    $('#enc-divisao').hidden = !div;
+    if (!div) { $('#enc-divisao').innerHTML = ''; return; }
+    var antes = {};
+    $$('#enc-divisao select').forEach(function (s) { antes[s.dataset.serv] = s.value; });
+    var servs = servsEscolhidos().map(function (id) { return D.servicos.filter(function (s) { return s.id === id; })[0]; }).filter(Boolean);
+    // Sugestão: quem faz mais serviços da lista (menos profissionais diferentes); a do filtro, se der
+    var pontos = function (p) { return servs.filter(function (s) { return faz(p, s); }).length + (p.id === filtroProf ? 0.5 : 0); };
+    $('#enc-divisao').innerHTML = servs.map(function (s) {
+      var quem = D.profissionais.filter(function (p) { return faz(p, s); });
+      var esc1 = antes[s.id] && quem.some(function (p) { return p.id === antes[s.id]; }) ? antes[s.id]
+        : (quem.slice().sort(function (a, b) { return pontos(b) - pontos(a); })[0] || {}).id;
+      return '<label class="divisao__linha"><span>' + esc(s.nome) + '</span>' +
+        '<select class="input" data-serv="' + esc(s.id) + '" aria-label="Profissional de ' + esc(s.nome) + '">' +
+        (quem.length ? quem.map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === esc1 ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('')
+          : '<option value="">Ninguém faz este serviço</option>') + '</select></label>';
+    }).join('') + '<p>As profissionais começam <b>ao mesmo tempo</b>. Se uma tiver mais de um serviço, ela faz um depois do outro.</p>';
+  }
+  /** [{prof, servicos}] do formulário (um grupo por profissional). Vazio se faltar profissional. */
+  function gruposEscolhidos() {
+    var ids = servsEscolhidos();
+    if (!ids.length) return [];
+    if (!dividindo()) return $('#enc-prof').value ? [{ prof: $('#enc-prof').value, servicos: ids }] : [];
+    var porProf = {}, ordem = [], falta = false;
+    $$('#enc-divisao select').forEach(function (s) {
+      if (!s.value) { falta = true; return; }
+      if (!porProf[s.value]) { porProf[s.value] = []; ordem.push(s.value); }
+      porProf[s.value].push(s.dataset.serv);
+    });
+    return falta ? [] : ordem.map(function (p) { return { prof: p, servicos: porProf[p] }; });
+  }
+  $('#enc-dividir').addEventListener('change', function () { dividirAuto = false; montarDivisao(); carregarLivres(); });
+  $('#enc-divisao').addEventListener('change', carregarLivres);
   function horaSugerida() {
     if (D.data !== D.hoje) return '09:00';
     var m = minutos(D.agora); m = Math.min(Math.ceil((m + 1) / 30) * 30, 23 * 60 + 30); // nunca "24:00"
@@ -566,6 +616,7 @@
       }).join('');
     }).join('');
     $('#form-enc').reset();
+    dividirAuto = false;
     escolhida = null; mostrarCliente(null); fecharSug();
     carregarClientes().catch(function () { /* sem lista: dá para digitar normalmente */ });
     atualizarProfsEncaixe();
@@ -593,9 +644,9 @@
   function carregarLivres() {
     horaEscolhida = '';
     if (tipoNovo !== 'agendar') return;
-    var box = $('#enc-livres'), d = { prof: $('#enc-prof').value, data: $('#enc-data').value, servicos: servsEscolhidos() };
-    if (!d.servicos.length) { box.innerHTML = '<p>Escolha os serviços para ver os horários livres.</p>'; return; }
-    if (!d.prof) { box.innerHTML = '<p>Ninguém faz todos esses serviços juntos. Marque em dois atendimentos.</p>'; return; }
+    var box = $('#enc-livres'), d = { grupos: gruposEscolhidos(), data: $('#enc-data').value };
+    if (!servsEscolhidos().length) { box.innerHTML = '<p>Escolha os serviços para ver os horários livres.</p>'; return; }
+    if (!d.grupos.length) { box.innerHTML = '<p>Escolha a profissional de cada serviço.</p>'; return; }
     if (!d.data) { box.innerHTML = '<p>Escolha o dia.</p>'; return; }
     var minha = ++buscaLivres;
     box.innerHTML = '<p>Procurando horários livres…</p>';
@@ -610,7 +661,7 @@
               ? '<button type="button" class="junto" aria-pressed="false" data-h="' + h + '" title="Já tem cliente nesse horário">' + h + '<small>⚠️ já tem cliente</small></button>'
               : '<button type="button" aria-pressed="false" data-h="' + h + '">' + h + '</button>';
           }).join('') + (juntos.length ? '<p class="livres__leg">⚠️ = já tem cliente nesse horário. Dá para marcar junto: o painel pede confirmação.</p>' : '')
-        : '<p>Nenhum horário nesse dia para esses serviços (fora do expediente ou bloqueado). Tente outro dia ou outra profissional, ou use a aba <b>Encaixe</b>.</p>';
+        : '<p>Nenhum horário nesse dia para esses serviços (fora do expediente ou bloqueado' + (d.grupos.length > 1 ? ', ou as profissionais não estão livres juntas' : '') + '). Tente outro dia ou outra profissional, ou use a aba <b>Encaixe</b>.</p>';
     }).catch(function (e) { if (minha === buscaLivres) box.innerHTML = '<p>Não consegui buscar os horários: ' + esc(msgErro(e)) + '</p>'; });
   }
   $('#enc-livres').addEventListener('click', function (e) {
@@ -641,14 +692,14 @@
     e.preventDefault();
     var agendar = tipoNovo === 'agendar';
     var dados = {
-      tipo: tipoNovo, nome: $('#enc-nome').value.trim(), fone: $('#enc-fone').value, email: $('#enc-email').value.trim(), prof: $('#enc-prof').value,
+      tipo: tipoNovo, nome: $('#enc-nome').value.trim(), fone: $('#enc-fone').value, email: $('#enc-email').value.trim(), grupos: gruposEscolhidos(),
       servicos: servsEscolhidos(), data: $('#enc-data').value, hora: agendar ? horaEscolhida : $('#enc-hora').value, obs: $('#enc-obs').value,
       confirmarForaHorario: $('#enc-ok').dataset.foraHorario === '1',
       confirmarJuntos: $('#enc-ok').dataset.juntos === '1',
     };
     var digitos = dados.fone.replace(/\D/g, '');
     var falta = !dados.nome ? 'Informe o nome da cliente.' : !digitos ? 'Informe o telefone da cliente (é obrigatório).' : digitos.length < 10 || digitos.length > 11 ? 'Confira o telefone: DDD + número, por exemplo (77) 99999-0000.'
-      : dados.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(dados.email) ? 'Confira o e-mail (ou deixe em branco).' : !dados.servicos.length ? 'Escolha pelo menos um serviço.' : !dados.prof ? 'Ninguém faz todos esses serviços juntos. Marque em dois atendimentos.' : !dados.data ? 'Informe o dia.'
+      : dados.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(dados.email) ? 'Confira o e-mail (ou deixe em branco).' : !dados.servicos.length ? 'Escolha pelo menos um serviço.' : !dados.grupos.length ? 'Escolha a profissional de cada serviço.' : !dados.data ? 'Informe o dia.'
       : !dados.hora ? (agendar ? 'Escolha um dos horários livres.' : 'Informe o horário.') : '';
     if (falta) { $('#enc-aviso').innerHTML = '<div class="aviso aviso--erro">' + esc(falta) + '</div>'; $('#enc-aviso').scrollIntoView({ block: 'nearest' }); return; }
     $('#enc-ok').disabled = true;
@@ -1140,6 +1191,7 @@
         '<small>Faz: ' + esc(p.categorias.join(', ')) + '</small>' +
         ((p.naoFaz || []).length ? '<small>Não faz: ' + esc(CFG.servicos.filter(function (s) { return p.naoFaz.indexOf(s.id) >= 0; }).map(function (s) { return s.nome; }).join(', ')) + '</small>' : '') +
         '<small>Dias: ' + esc(resumoEscala(p)) + '</small>' +
+        (p.umaPorVez ? '<small>Encaixe: não · uma cliente por vez</small>' : '') +
         '<small>Painel: ' + (p.dona ? 'usuário <b>' + esc(p.usuario) + '</b> · acesso total' : p.usuario ? 'usuário <b>' + esc(p.usuario) + '</b> · vê só a própria agenda' : 'sem acesso') + '</small>' +
         '<small>Agenda no celular: ' + (p.gmail ? esc(p.gmail) : 'não ligada') + '</small>' +
         '</div><button class="btn btn--ghost btn--sm" type="button" data-editar-prof="' + esc(p.id) + '">Editar</button></div>';
@@ -1196,7 +1248,11 @@
           }).join('') + '</div>' +
           (p.escalaComDatas ? '<p class="dica">Ela também tem uma escala com datas ("Válido de/até") na planilha. Essa parte continua valendo e não muda por aqui.</p>' : '') +
           '<p class="dica">Férias ou folga de um dia? Não precisa mudar aqui: use <b>Bloquear</b>, no topo do painel.</p>' +
-        '</div>') +
+        '</div>' +
+        '<div class="bloco"><div class="bloco__t">Encaixe (duas clientes no mesmo horário)</div>' +
+          '<label class="check"><input type="checkbox" id="pf-juntas"' + (p.umaPorVez ? '' : ' checked') + '> Atende duas clientes ao mesmo tempo</label>' +
+          '<p class="dica" style="margin-bottom:0">Ligado: quando ela já tem cliente, o site mostra o horário com <b>consultar</b> (a cliente pede encaixe pelo WhatsApp) e o painel deixa <b>marcar junto</b>, com confirmação. ' +
+          '<b>Desligado</b> (quem trabalha sozinha, como a manicure): uma cliente por vez. O horário em que ela já tem cliente fica <b>fechado</b> no site e no painel.</p></div>') +
       secao(3, p.dona
         ? '<div class="bloco"><div class="bloco__t">Acesso ao painel</div><p style="margin:0">Usuário <b>' + esc(p.usuario) + '</b> · acesso total. A senha dela se troca em "Trocar minha senha" (no nome, lá em cima).</p></div>'
         : '<div class="bloco"><div class="bloco__t">Acesso ao painel' + (nova || p.usuario ? '' : ' <span style="text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span>') + '</div>' +
@@ -1271,6 +1327,7 @@
     var porWhats = $('#pf-modo [data-modo="whats"]').getAttribute('aria-pressed') === 'true';
     return {
       porWhats: porWhats,
+      umaPorVez: !$('#pf-juntas').checked,
       linha: nova ? null : p.linha, id: nova ? '' : p.id, nome: nova ? $('#pf-nome').value.trim() : p.nome,
       todas: cats.indexOf('Todas') >= 0, categorias: cats.filter(function (c) { return c !== 'Todas'; }),
       naoFaz: $$('#pf-servs [data-pf-serv]').filter(function (c) { return !c.checked; }).map(function (c) { return c.dataset.pfServ; }),
